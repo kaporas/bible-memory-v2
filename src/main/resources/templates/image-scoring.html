@@ -226,6 +226,81 @@
     border-radius: 3px; padding: 12px 16px;
     color: var(--fail); font-size: 0.85rem;
   }
+
+  /* ═══════ 결과 오버레이 애니메이션 ═══════ */
+  .ro {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    align-items: center; justify-content: center; overflow: hidden;
+    cursor: pointer; background: transparent; transition: background 0.5s;
+  }
+  .ro.ro-show { display: flex; }
+  .ro.ro-active { background: rgba(6, 3, 1, 0.93); }
+  .ro-rays { position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 0; pointer-events: none; }
+  .ro-ray {
+    position: absolute; top: -2px; left: 0;
+    width: 420px; height: 4px;
+    background: linear-gradient(90deg, rgba(201,168,76,0.95) 0%, transparent 100%);
+    transform-origin: left center; transform: scaleX(0); opacity: 0;
+    animation: roRayExpand 1.4s ease-out forwards;
+  }
+  @keyframes roRayExpand {
+    0% { transform: scaleX(0); opacity: 0; } 35% { opacity: 0.9; } 100% { transform: scaleX(1); opacity: 0.22; }
+  }
+  .ro-center {
+    position: relative; z-index: 2; text-align: center; padding: 0 20px;
+    transform: scale(0.3) translateY(-50px); opacity: 0;
+    transition: transform 0.75s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s;
+  }
+  .ro.ro-active .ro-center { transform: scale(1) translateY(0); opacity: 1; }
+  .ro-icon { font-size: 6.5rem; line-height: 1.1; display: block; margin-bottom: 4px; }
+  .ro-title { font-family: 'Nanum Myeongjo', serif; font-size: 2.6rem; font-weight: 800; letter-spacing: 0.12em; margin-bottom: 12px; }
+  .ro-sub { font-size: 1rem; line-height: 2.1; }
+  .ro-hint { font-size: 0.62rem; color: rgba(255,255,255,0.18); margin-top: 24px; }
+  .ro-particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .ro.pass-mode .ro-title { color: #F0D97A; text-shadow: 0 0 28px rgba(240,217,122,1), 0 0 60px rgba(201,168,76,0.7); }
+  .ro.pass-mode .ro-sub   { color: rgba(232,201,122,0.82); }
+  .ro.pass-mode .ro-icon  { animation: roIconCrown 0.8s 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes roIconCrown {
+    0% { transform: scale(0.15) rotate(-35deg) translateY(-30px); opacity: 0; filter: drop-shadow(0 0 0 rgba(201,168,76,0)); }
+    62% { transform: scale(1.35) rotate(10deg) translateY(0); opacity: 1; }
+    80% { transform: scale(0.88) rotate(-4deg); }
+    100% { transform: scale(1) rotate(0) translateY(0); opacity: 1; filter: drop-shadow(0 0 22px rgba(240,217,122,1)); }
+  }
+  .ro.fail-mode .ro-title { color: #B8D8F8; text-shadow: 0 0 22px rgba(100,160,220,0.7); }
+  .ro.fail-mode .ro-sub   { color: rgba(180,215,250,0.85); }
+  .ro.fail-mode .ro-icon  { animation: roIconSad 0.95s 0.2s ease-out both; }
+  @keyframes roIconSad {
+    0% { transform: scale(0.2) translateY(-25px) rotate(12deg); opacity: 0; }
+    52% { transform: scale(1.18) translateY(0) rotate(-5deg); opacity: 1; }
+    72% { transform: scale(0.92) translateY(5px) rotate(2deg); }
+    88% { transform: scale(1.05) translateY(-1px) rotate(-1deg); }
+    100% { transform: scale(1) translateY(0) rotate(0); opacity: 1; }
+  }
+  .ro-sp {
+    position: absolute; top: 50%; left: 50%; font-size: 1.5rem; pointer-events: none;
+    animation: roSpFly 1.6s ease-out var(--spd) both;
+  }
+  @keyframes roSpFly {
+    0% { transform: translate(-50%,-50%) scale(1.4); opacity: 1; }
+    65% { opacity: 0.9; }
+    100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.05); opacity: 0; }
+  }
+  .ro-rd {
+    position: absolute; top: -40px; font-size: 1.2rem; pointer-events: none; opacity: 0.65;
+    animation: roRdFall linear infinite;
+  }
+  @keyframes roRdFall {
+    from { transform: translateY(0) rotate(14deg); opacity: 0.65; }
+    to   { transform: translateY(110vh) rotate(14deg); opacity: 0; }
+  }
+  .ro-rainbow {
+    position: absolute; bottom: 7%; left: 50%; transform: translateX(-50%);
+    font-size: 4rem; opacity: 0; animation: roRainbow 0.9s 1.4s ease-out forwards;
+  }
+  @keyframes roRainbow {
+    from { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(18px); }
+    to   { opacity: 0.9; transform: translateX(-50%) scale(1) translateY(0); }
+  }
 </style>
 </head>
 <body>
@@ -477,6 +552,7 @@ async function submitScoring() {
     renderResult(data);
     document.getElementById('result-section').style.display = 'block';
     document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => showResultAnimation(data.passed), 350);
   } catch (e) {
     const eb = document.getElementById('errorBox');
     eb.textContent = '오류: ' + e.message;
@@ -539,6 +615,86 @@ function renderResult(d) {
 
 // 초기 구절 행 1개 추가
 addVerseRow();
+
+function showResultAnimation(passed) {
+  const ov = document.getElementById('resultOverlay');
+  const icon = document.getElementById('roIcon');
+  const title = document.getElementById('roTitle');
+  const sub = document.getElementById('roSub');
+  const particles = document.getElementById('roParticles');
+  const rays = document.getElementById('roRays');
+
+  particles.innerHTML = '';
+  rays.innerHTML = '';
+  ov.className = 'ro ro-show';
+
+  if (passed) {
+    ov.classList.add('pass-mode');
+    icon.textContent = '👑';
+    title.textContent = '할렐루야!';
+    sub.innerHTML = '면류관을 받으셨습니다<br><span style="font-size:2.6rem;filter:drop-shadow(0 0 14px rgba(201,168,76,1))">✝</span>';
+
+    for (let i = 0; i < 12; i++) {
+      const ray = document.createElement('div');
+      ray.className = 'ro-ray';
+      ray.style.transform = `rotate(${i * 30}deg)`;
+      ray.style.animationDelay = (i * 0.07) + 's';
+      rays.appendChild(ray);
+    }
+    const sym = ['✨','⭐','🌟','💫','✝','✨','⭐','🌟','💫'];
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('div');
+      p.className = 'ro-sp';
+      const angle = (i / 22) * 360;
+      const dist = 100 + Math.random() * 180;
+      p.style.setProperty('--tx', (Math.cos(angle * Math.PI / 180) * dist) + 'px');
+      p.style.setProperty('--ty', (Math.sin(angle * Math.PI / 180) * dist) + 'px');
+      p.style.setProperty('--spd', (Math.random() * 0.55) + 's');
+      p.textContent = sym[i % sym.length];
+      particles.appendChild(p);
+    }
+  } else {
+    ov.classList.add('fail-mode');
+    icon.textContent = '🥺';
+    title.textContent = '아쉽네요...';
+    sub.innerHTML = '포기하지 마세요! 💪<br>다시 도전하면 반드시 합격하실 거예요!<br><span style="font-size:1rem;color:rgba(180,215,250,0.6)">🙏 하나님께서 함께 하십니다</span>';
+
+    for (let i = 0; i < 16; i++) {
+      const r = document.createElement('div');
+      r.className = 'ro-rd';
+      r.style.left = (4 + Math.random() * 92) + '%';
+      r.style.animationDelay = (Math.random() * 2.5) + 's';
+      r.style.animationDuration = (0.85 + Math.random() * 1) + 's';
+      r.textContent = '💧';
+      particles.appendChild(r);
+    }
+    const rb = document.createElement('div');
+    rb.className = 'ro-rainbow';
+    rb.textContent = '🌈';
+    particles.appendChild(rb);
+  }
+
+  requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('ro-active')));
+  setTimeout(() => closeOverlay(), 4500);
+}
+
+function closeOverlay() {
+  const ov = document.getElementById('resultOverlay');
+  ov.classList.remove('ro-active');
+  setTimeout(() => { ov.className = 'ro'; }, 550);
+}
 </script>
+
+<!-- 결과 오버레이 -->
+<div id="resultOverlay" class="ro" onclick="closeOverlay()">
+  <div class="ro-rays" id="roRays"></div>
+  <div class="ro-center">
+    <div class="ro-icon" id="roIcon"></div>
+    <div class="ro-title" id="roTitle"></div>
+    <div class="ro-sub" id="roSub"></div>
+    <div class="ro-hint">화면을 탭하여 닫기</div>
+  </div>
+  <div class="ro-particles" id="roParticles"></div>
+</div>
 </body>
 </html>
