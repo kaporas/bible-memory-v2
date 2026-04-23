@@ -426,10 +426,10 @@
         <select id="presetSelect" onchange="applyPreset()">
           <option value="">— 직접 입력 —</option>
           <option value="ps119_1_32" selected>시편 119편 1~32절 (개역개정)</option>
-          <option value="ps119_1_8">시편 119편 1~8절 (알렙)</option>
-          <option value="ps119_9_16">시편 119편 9~16절 (베트)</option>
-          <option value="ps119_17_24">시편 119편 17~24절 (김멜)</option>
-          <option value="ps119_25_32">시편 119편 25~32절 (달레트)</option>
+          <option value="ps119_1_8">시편 119편 1~8절 </option>
+          <option value="ps119_9_16">시편 119편 9~16절 </option>
+          <option value="ps119_17_24">시편 119편 17~24절 </option>
+          <option value="ps119_25_32">시편 119편 25~32절 </option>
           <option value="ps23">시편 23편 전체</option>
         </select>
       </div>
@@ -1034,7 +1034,7 @@ function showResultAnimation(passed) {
     ov.classList.add('pass-mode');
     icon.textContent = '👑';
     title.textContent = '할렐루야!';
-    sub.innerHTML = '합격하셨습니다 <br><span style="font-size:2.6rem;filter:drop-shadow(0 0 14px rgba(201,168,76,1))">✝</span>';
+    sub.innerHTML = '합격 하셨습니다 <br><span style="font-size:2.6rem;filter:drop-shadow(0 0 14px rgba(201,168,76,1))">✝</span>';
 
     for (let i = 0; i < 12; i++) {
       const ray = document.createElement('div');

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이미지 채점 - 성경암송대회 채점 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C97A; --gold-dark: #8B6914;
+    --parchment: #F5EDD8; --ink: #1A1208; --ink-mid: #3D2B10; --ink-light: #6B4F2A;
+    --correct: #2D6A4F; --correct-bg: #D8F3DC; --wrong: #922B21; --wrong-bg: #FADBD8;
+    --pass: #1A5C38; --pass-bg: #C8F5DC; --fail: #7B1D1D; --fail-bg: #FDE8E8;
+    --shadow: rgba(26,18,8,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #1A1208;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,26,26,0.07) 0%, transparent 50%);
+    min-height: 100vh; color: var(--ink);
+  }
+  .app-wrapper { max-width: 860px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  .header { text-align: center; padding: 36px 20px 26px; }
+  .header::before, .header::after {
+    content: ''; display: block; height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 10px auto; width: 70%;
+  }
+  .header-icon { font-size: 2.2rem; margin-bottom: 6px; filter: drop-shadow(0 0 14px rgba(201,168,76,0.55)); }
+  .header h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.3rem, 4vw, 1.9rem); font-weight: 800;
+    color: var(--gold-light); letter-spacing: 0.1em;
+    text-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  }
+  .header p { color: rgba(201,168,76,0.55); font-size: 0.8rem; margin-top: 5px; }
+  .header-nav { margin-top: 14px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .header-nav a {
+    display: inline-block; color: rgba(201,168,76,0.7); font-size: 0.78rem;
+    text-decoration: none; border: 1px solid rgba(201,168,76,0.3);
+    padding: 5px 14px; border-radius: 20px; transition: all 0.2s;
+  }
+  .header-nav a:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .card {
+    background: var(--parchment); border-radius: 4px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 22px; overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    padding: 13px 22px; border-bottom: 2px solid var(--gold-dark);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h2 { font-family: 'Nanum Myeongjo', serif; font-size: 0.98rem; color: var(--gold-light); letter-spacing: 0.08em; }
+  .card-body { padding: 20px 22px; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 0.72rem; font-weight: 700; color: var(--ink-light); letter-spacing: 0.05em; text-transform: uppercase; }
+  .form-group input {
+    padding: 8px 12px; border: 1px solid rgba(139,105,20,0.35);
+    border-radius: 3px; font-size: 0.88rem; font-family: inherit;
+    background: rgba(255,255,255,0.6); color: var(--ink);
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus { outline: none; border-color: var(--gold); background: white; }
+
+  /* 구절 입력 */
+  .verse-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .verse-row {
+    display: grid; grid-template-columns: 110px 1fr 32px; gap: 8px; align-items: start;
+  }
+  .verse-row input {
+    padding: 7px 10px; border: 1px solid rgba(139,105,20,0.3);
+    border-radius: 3px; font-size: 0.83rem; font-family: inherit;
+    background: rgba(255,255,255,0.55); color: var(--ink);
+  }
+  .verse-row input:focus { outline: none; border-color: var(--gold); background: white; }
+  .verse-row textarea {
+    padding: 7px 10px; border: 1px solid rgba(139,105,20,0.3);
+    border-radius: 3px; font-size: 0.83rem; font-family: inherit;
+    background: rgba(255,255,255,0.55); color: var(--ink);
+    resize: vertical; min-height: 60px; line-height: 1.5;
+  }
+  .verse-row textarea:focus { outline: none; border-color: var(--gold); background: white; }
+  .btn-remove-verse {
+    width: 28px; height: 28px; border: 1px solid rgba(146,43,33,0.4);
+    background: rgba(146,43,33,0.06); color: var(--wrong); border-radius: 3px;
+    cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; flex-shrink: 0; margin-top: 1px;
+  }
+  .btn-remove-verse:hover { background: var(--wrong-bg); border-color: var(--wrong); }
+  .btn-add-verse {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 16px; border: 1px dashed rgba(201,168,76,0.5);
+    background: rgba(201,168,76,0.04); color: var(--gold-dark);
+    border-radius: 3px; cursor: pointer; font-size: 0.82rem;
+    font-family: inherit; transition: all 0.15s; width: 100%;
+    justify-content: center;
+  }
+  .btn-add-verse:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+
+  /* 이미지 업로드 */
+  .upload-area {
+    border: 2px dashed rgba(201,168,76,0.4); border-radius: 6px;
+    padding: 32px 20px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: rgba(201,168,76,0.02);
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--gold); background: rgba(201,168,76,0.07);
+  }
+  .upload-area input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .upload-label { font-size: 0.9rem; color: var(--ink-mid); margin-bottom: 5px; }
+  .upload-hint { font-size: 0.75rem; color: var(--ink-light); }
+  .upload-preview {
+    display: none; margin-top: 14px;
+    border: 1px solid rgba(201,168,76,0.3); border-radius: 4px; overflow: hidden;
+  }
+  .upload-preview img { max-width: 100%; max-height: 300px; display: block; margin: 0 auto; }
+  .upload-filename {
+    padding: 6px 12px; background: rgba(201,168,76,0.08);
+    font-size: 0.78rem; color: var(--ink-light); text-align: center;
+  }
+
+  /* 채점 버튼 */
+  .btn-score {
+    display: block; width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+    color: var(--ink); font-family: 'Nanum Myeongjo', serif;
+    font-size: 1.05rem; font-weight: 700; letter-spacing: 0.08em;
+    border: none; border-radius: 4px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+    transition: all 0.2s; text-align: center;
+  }
+  .btn-score:hover { box-shadow: 0 6px 22px rgba(201,168,76,0.6); transform: translateY(-1px); }
+  .btn-score:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* 결과 섹션 */
+  #result-section { display: none; }
+
+  .result-header-card {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    border-radius: 4px; padding: 26px 28px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow);
+    margin-bottom: 18px; text-align: center;
+  }
+  .result-name {
+    font-family: 'Nanum Myeongjo', serif; font-size: 1.1rem;
+    color: rgba(201,168,76,0.7); margin-bottom: 18px; letter-spacing: 0.05em;
+  }
+  .accuracy-ring-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+  .accuracy-ring {
+    width: 110px; height: 110px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .accuracy-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .accuracy-ring-text {
+    font-family: 'Nanum Myeongjo', serif; font-size: 1.6rem; font-weight: 800;
+    color: var(--gold-light); z-index: 1;
+  }
+  .pass-badge {
+    display: inline-block; padding: 5px 22px; border-radius: 20px;
+    font-family: 'Nanum Myeongjo', serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.05em;
+    margin-bottom: 18px;
+  }
+  .pass-badge.pass { background: var(--pass-bg); color: var(--pass); }
+  .pass-badge.fail { background: var(--fail-bg); color: var(--fail); }
+  .result-stats { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; }
+  .stat-item { text-align: center; }
+  .stat-val { font-family: 'Nanum Myeongjo', serif; font-size: 1.2rem; font-weight: 800; color: var(--gold-light); }
+  .stat-lbl { font-size: 0.68rem; color: rgba(201,168,76,0.5); margin-top: 2px; letter-spacing: 0.05em; }
+
+  .ocr-text-box {
+    background: rgba(255,255,255,0.5); border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 3px; padding: 12px 14px;
+    font-size: 0.82rem; color: var(--ink-mid); line-height: 1.8;
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 160px; overflow-y: auto;
+  }
+
+  .verse-result-item { margin-bottom: 14px; }
+  .verse-result-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  .verse-ref-tag {
+    font-family: 'Nanum Myeongjo', serif; font-size: 0.78rem; font-weight: 700;
+    color: var(--gold-dark); background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.3); padding: 2px 10px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .verse-result-badge {
+    font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 10px;
+  }
+  .verse-result-badge.correct { background: var(--correct-bg); color: var(--correct); }
+  .verse-result-badge.wrong { background: var(--wrong-bg); color: var(--wrong); }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 540px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-box { border-radius: 3px; padding: 10px 12px; }
+  .compare-box.ref { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); }
+  .compare-box.ocr { background: rgba(255,255,255,0.5); border: 1px solid rgba(201,168,76,0.2); }
+  .compare-box-label { font-size: 0.65rem; font-weight: 700; color: var(--ink-light); letter-spacing: 0.06em; margin-bottom: 5px; text-transform: uppercase; }
+  .compare-box-text { font-size: 0.82rem; color: var(--ink-mid); line-height: 1.7; word-break: break-all; }
+
+  .spinner {
+    display: inline-block; width: 18px; height: 18px; margin-right: 8px;
+    border: 2px solid rgba(26,18,8,0.3); border-top-color: var(--ink);
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .alert-error {
+    background: var(--fail-bg); border: 1px solid rgba(122,29,29,0.3);
+    border-radius: 3px; padding: 12px 16px;
+    color: var(--fail); font-size: 0.85rem;
+  }
+
+  /* ═══════ 결과 오버레이 애니메이션 ═══════ */
+  .ro {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    align-items: center; justify-content: center; overflow: hidden;
+    cursor: pointer; background: transparent; transition: background 0.5s;
+  }
+  .ro.ro-show { display: flex; }
+  .ro.ro-active { background: rgba(6, 3, 1, 0.93); }
+  .ro-rays { position: absolute; top: 50%; left: 50%; width: 0; height: 0; z-index: 0; pointer-events: none; }
+  .ro-ray {
+    position: absolute; top: -2px; left: 0;
+    width: 420px; height: 4px;
+    background: linear-gradient(90deg, rgba(201,168,76,0.95) 0%, transparent 100%);
+    transform-origin: left center; transform: scaleX(0); opacity: 0;
+    animation: roRayExpand 1.4s ease-out forwards;
+  }
+  @keyframes roRayExpand {
+    0% { transform: scaleX(0); opacity: 0; } 35% { opacity: 0.9; } 100% { transform: scaleX(1); opacity: 0.22; }
+  }
+  .ro-center {
+    position: relative; z-index: 2; text-align: center; padding: 0 20px;
+    transform: scale(0.3) translateY(-50px); opacity: 0;
+    transition: transform 0.75s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s;
+  }
+  .ro.ro-active .ro-center { transform: scale(1) translateY(0); opacity: 1; }
+  .ro-icon { font-size: 6.5rem; line-height: 1.1; display: block; margin-bottom: 4px; }
+  .ro-title { font-family: 'Nanum Myeongjo', serif; font-size: 2.6rem; font-weight: 800; letter-spacing: 0.12em; margin-bottom: 12px; }
+  .ro-sub { font-size: 1rem; line-height: 2.1; }
+  .ro-hint { font-size: 0.62rem; color: rgba(255,255,255,0.18); margin-top: 24px; }
+  .ro-particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  .ro.pass-mode .ro-title { color: #F0D97A; text-shadow: 0 0 28px rgba(240,217,122,1), 0 0 60px rgba(201,168,76,0.7); }
+  .ro.pass-mode .ro-sub   { color: rgba(232,201,122,0.82); }
+  .ro.pass-mode .ro-icon  { animation: roIconCrown 0.8s 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes roIconCrown {
+    0% { transform: scale(0.15) rotate(-35deg) translateY(-30px); opacity: 0; filter: drop-shadow(0 0 0 rgba(201,168,76,0)); }
+    62% { transform: scale(1.35) rotate(10deg) translateY(0); opacity: 1; }
+    80% { transform: scale(0.88) rotate(-4deg); }
+    100% { transform: scale(1) rotate(0) translateY(0); opacity: 1; filter: drop-shadow(0 0 22px rgba(240,217,122,1)); }
+  }
+  .ro.fail-mode .ro-title { color: #B8D8F8; text-shadow: 0 0 22px rgba(100,160,220,0.7); }
+  .ro.fail-mode .ro-sub   { color: rgba(180,215,250,0.85); }
+  .ro.fail-mode .ro-icon  { animation: roIconSad 0.95s 0.2s ease-out both; }
+  @keyframes roIconSad {
+    0% { transform: scale(0.2) translateY(-25px) rotate(12deg); opacity: 0; }
+    52% { transform: scale(1.18) translateY(0) rotate(-5deg); opacity: 1; }
+    72% { transform: scale(0.92) translateY(5px) rotate(2deg); }
+    88% { transform: scale(1.05) translateY(-1px) rotate(-1deg); }
+    100% { transform: scale(1) translateY(0) rotate(0); opacity: 1; }
+  }
+  .ro-sp {
+    position: absolute; top: 50%; left: 50%; font-size: 1.5rem; pointer-events: none;
+    animation: roSpFly 1.6s ease-out var(--spd) both;
+  }
+  @keyframes roSpFly {
+    0% { transform: translate(-50%,-50%) scale(1.4); opacity: 1; }
+    65% { opacity: 0.9; }
+    100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.05); opacity: 0; }
+  }
+  .ro-rd {
+    position: absolute; top: -40px; font-size: 1.2rem; pointer-events: none; opacity: 0.65;
+    animation: roRdFall linear infinite;
+  }
+  @keyframes roRdFall {
+    from { transform: translateY(0) rotate(14deg); opacity: 0.65; }
+    to   { transform: translateY(110vh) rotate(14deg); opacity: 0; }
+  }
+  .ro-rainbow {
+    position: absolute; bottom: 7%; left: 50%; transform: translateX(-50%);
+    font-size: 4rem; opacity: 0; animation: roRainbow 0.9s 1.4s ease-out forwards;
+  }
+  @keyframes roRainbow {
+    from { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(18px); }
+    to   { opacity: 0.9; transform: translateX(-50%) scale(1) translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <div class="header">
+    <div class="header-icon">📷</div>
+    <h1>이미지 채점</h1>
+    <p>Scripture Memorization · Image OCR Scoring</p>
+    <div class="header-nav">
+      <a th:href="@{/}">✎ 텍스트 채점</a>
+      <a th:href="@{/image-history}">📋 이미지 채점 이력</a>
+      <a th:href="@{/history}">📋 텍스트 채점 이력</a>
+    </div>
+  </div>
+
+  <!-- 참가자 정보 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>👤 참가자 정보</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>대회명 *</label>
+          <input type="text" id="contestName" placeholder="예: 2026년 성경암송대회">
+        </div>
+        <div class="form-group">
+          <label>참가자명 *</label>
+          <input type="text" id="participantName" placeholder="예: 홍길동">
+        </div>
+        <div class="form-group">
+          <label>성경 책명</label>
+          <input type="text" id="bibleBook" placeholder="예: 시편">
+        </div>
+        <div class="form-group">
+          <label>장/범위</label>
+          <input type="text" id="bibleChapter" placeholder="예: 119편 1-8절">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기준 말씀 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>📖 기준 말씀 입력</h2>
+    </div>
+    <div class="card-body">
+      <div id="verseList" class="verse-list">
+        <!-- 구절 행이 동적으로 추가됨 -->
+      </div>
+      <button type="button" class="btn-add-verse" onclick="addVerseRow()">
+        + 구절 추가
+      </button>
+    </div>
+  </div>
+
+  <!-- 이미지 업로드 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>🖼 수기 암송 이미지 업로드</h2>
+    </div>
+    <div class="card-body">
+      <div class="upload-area" id="uploadArea"
+           ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <input type="file" id="imageFile" accept="image/*" onchange="handleFileSelect(event)">
+        <div class="upload-icon">📄</div>
+        <div class="upload-label">이미지를 끌어다 놓거나 클릭하여 선택</div>
+        <div class="upload-hint">JPG, PNG, WEBP 지원 · 최대 10MB</div>
+      </div>
+      <div class="upload-preview" id="uploadPreview">
+        <img id="previewImg" src="" alt="미리보기">
+        <div class="upload-filename" id="uploadFilename"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 채점 버튼 -->
+  <button type="button" class="btn-score" id="btnScore" onclick="submitScoring()">
+    🔍 OCR 채점 시작
+  </button>
+
+  <!-- 에러 -->
+  <div class="alert-error" id="errorBox" style="display:none; margin-bottom:18px;"></div>
+
+  <!-- 결과 -->
+  <div id="result-section">
+
+    <div class="result-header-card">
+      <div class="result-name" id="resName"></div>
+      <div class="accuracy-ring-wrap">
+        <div class="accuracy-ring">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(201,168,76,0.15)" stroke-width="10"/>
+            <circle id="ringFill" cx="55" cy="55" r="46" fill="none"
+                    stroke="url(#ringGrad)" stroke-width="10"
+                    stroke-dasharray="289.03" stroke-dashoffset="289.03"
+                    stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#8B6914"/>
+                <stop offset="100%" stop-color="#E8C97A"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="accuracy-ring-text" id="resAccText">0%</div>
+        </div>
+      </div>
+      <div><span class="pass-badge" id="resPassBadge">-</span></div>
+      <div class="result-stats">
+        <div class="stat-item">
+          <div class="stat-val" id="resTotalChars">0</div>
+          <div class="stat-lbl">총 글자</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="resCorrectChars">0</div>
+          <div class="stat-lbl">정확 글자</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="resWrongChars">0</div>
+          <div class="stat-lbl">오류 글자</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="resVerses">0/0</div>
+          <div class="stat-lbl">구절 완성</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OCR 추출 텍스트 -->
+    <div class="card">
+      <div class="card-header"><h2>🔤 OCR 추출 텍스트</h2></div>
+      <div class="card-body">
+        <div class="ocr-text-box" id="ocrRawText"></div>
+      </div>
+    </div>
+
+    <!-- 구절별 비교 결과 -->
+    <div class="card">
+      <div class="card-header"><h2>📋 구절별 비교 결과</h2></div>
+      <div class="card-body" id="verseResultsBody"></div>
+    </div>
+
+  </div><!-- /result-section -->
+
+</div><!-- /app-wrapper -->
+
+<script>
+let verseCount = 0;
+
+function addVerseRow(ref = '', text = '') {
+  verseCount++;
+  const list = document.getElementById('verseList');
+  const row = document.createElement('div');
+  row.className = 'verse-row';
+  row.id = 'vrow-' + verseCount;
+  row.innerHTML = `
+    <input type="text" placeholder="절 번호 (예: 1절)" value="${escHtml(ref)}" class="verse-ref-input">
+    <textarea placeholder="기준 말씀 전문을 입력하세요" class="verse-ref-text">${escHtml(text)}</textarea>
+    <button type="button" class="btn-remove-verse" onclick="removeVerse('vrow-${verseCount}')" title="삭제">×</button>
+  `;
+  list.appendChild(row);
+}
+
+function removeVerse(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getVerses() {
+  const rows = document.querySelectorAll('.verse-row');
+  return Array.from(rows).map(row => ({
+    ref: row.querySelector('.verse-ref-input').value.trim(),
+    referenceText: row.querySelector('.verse-ref-text').value.trim()
+  })).filter(v => v.referenceText);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.add('dragover');
+}
+function handleDragLeave(e) {
+  document.getElementById('uploadArea').classList.remove('dragover');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) setFile(files[0]);
+}
+function handleFileSelect(e) {
+  if (e.target.files.length > 0) setFile(e.target.files[0]);
+}
+function setFile(file) {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('imageFile').files = dt.files;
+
+  const preview = document.getElementById('uploadPreview');
+  const img = document.getElementById('previewImg');
+  const fname = document.getElementById('uploadFilename');
+  const reader = new FileReader();
+  reader.onload = e => { img.src = e.target.result; };
+  reader.readAsDataURL(file);
+  fname.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+  preview.style.display = 'block';
+}
+
+async function submitScoring() {
+  const contestName = document.getElementById('contestName').value.trim();
+  const participantName = document.getElementById('participantName').value.trim();
+  const bibleBook = document.getElementById('bibleBook').value.trim();
+  const bibleChapter = document.getElementById('bibleChapter').value.trim();
+  const verses = getVerses();
+  const fileInput = document.getElementById('imageFile');
+
+  if (!contestName) { alert('대회명을 입력해주세요.'); return; }
+  if (!participantName) { alert('참가자명을 입력해주세요.'); return; }
+  if (verses.length === 0) { alert('기준 말씀을 최소 1구절 이상 입력해주세요.'); return; }
+  if (!fileInput.files || fileInput.files.length === 0) { alert('채점할 이미지를 업로드해주세요.'); return; }
+
+  const btn = document.getElementById('btnScore');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>OCR 채점 중...';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('result-section').style.display = 'none';
+
+  try {
+    const formData = new FormData();
+    formData.append('contestName', contestName);
+    formData.append('participantName', participantName);
+    formData.append('bibleBook', bibleBook);
+    formData.append('bibleChapter', bibleChapter);
+    formData.append('versesJson', JSON.stringify(verses));
+    formData.append('imageFile', fileInput.files[0]);
+
+    const resp = await fetch('/api/image-scoring/score', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      throw new Error(data.error || '채점 중 오류가 발생했습니다.');
+    }
+
+    renderResult(data);
+    document.getElementById('result-section').style.display = 'block';
+    document.getElementById('result-section').scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => showResultAnimation(data.passed), 350);
+  } catch (e) {
+    const eb = document.getElementById('errorBox');
+    eb.textContent = '오류: ' + e.message;
+    eb.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 OCR 채점 시작';
+  }
+}
+
+function renderResult(d) {
+  document.getElementById('resName').textContent =
+    d.participantName + '  ·  ' + d.contestName +
+    (d.bibleBook ? '  ·  ' + d.bibleBook : '') +
+    (d.bibleChapter ? ' ' + d.bibleChapter : '');
+
+  const acc = d.accuracy || 0;
+  document.getElementById('resAccText').textContent = acc.toFixed(1) + '%';
+  const circ = 289.03;
+  const offset = circ - (Math.min(acc, 100) / 100) * circ;
+  document.getElementById('ringFill').style.strokeDashoffset = offset;
+
+  const badge = document.getElementById('resPassBadge');
+  badge.textContent = d.passed ? '✓ 합격' : '✗ 불합격';
+  badge.className = 'pass-badge ' + (d.passed ? 'pass' : 'fail');
+
+  document.getElementById('resTotalChars').textContent = (d.totalChars || 0).toLocaleString();
+  document.getElementById('resCorrectChars').textContent = (d.correctChars || 0).toLocaleString();
+  document.getElementById('resWrongChars').textContent = (d.wrongChars || 0).toLocaleString();
+  document.getElementById('resVerses').textContent = (d.correctVerses || 0) + '/' + (d.totalVerses || 0);
+
+  document.getElementById('ocrRawText').textContent = d.ocrRawText || '(추출된 텍스트 없음)';
+
+  const body = document.getElementById('verseResultsBody');
+  body.innerHTML = '';
+  (d.verseScores || []).forEach(vs => {
+    const item = document.createElement('div');
+    item.className = 'verse-result-item';
+    const badgeClass = vs.correct ? 'correct' : 'wrong';
+    const badgeText = vs.correct ? '✓ 정답' : ('✗ ' + (vs.editDistance || 0) + '자 오류');
+    item.innerHTML = `
+      <div class="verse-result-header">
+        <span class="verse-ref-tag">${escHtml(vs.ref || '')}</span>
+        <span class="verse-result-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-box ref">
+          <div class="compare-box-label">기준 말씀</div>
+          <div class="compare-box-text">${escHtml(vs.referenceText || '')}</div>
+        </div>
+        <div class="compare-box ocr">
+          <div class="compare-box-label">OCR 인식 텍스트</div>
+          <div class="compare-box-text">${escHtml(vs.ocrText || '(인식 없음)')}</div>
+        </div>
+      </div>
+    `;
+    body.appendChild(item);
+  });
+}
+
+// 초기 구절 행 1개 추가
+addVerseRow();
+
+function showResultAnimation(passed) {
+  const ov = document.getElementById('resultOverlay');
+  const icon = document.getElementById('roIcon');
+  const title = document.getElementById('roTitle');
+  const sub = document.getElementById('roSub');
+  const particles = document.getElementById('roParticles');
+  const rays = document.getElementById('roRays');
+
+  particles.innerHTML = '';
+  rays.innerHTML = '';
+  ov.className = 'ro ro-show';
+
+  if (passed) {
+    ov.classList.add('pass-mode');
+    icon.textContent = '👑';
+    title.textContent = '할렐루야!';
+    sub.innerHTML = '면류관을 받으셨습니다<br><span style="font-size:2.6rem;filter:drop-shadow(0 0 14px rgba(201,168,76,1))">✝</span>';
+
+    for (let i = 0; i < 12; i++) {
+      const ray = document.createElement('div');
+      ray.className = 'ro-ray';
+      ray.style.transform = `rotate(${i * 30}deg)`;
+      ray.style.animationDelay = (i * 0.07) + 's';
+      rays.appendChild(ray);
+    }
+    const sym = ['✨','⭐','🌟','💫','✝','✨','⭐','🌟','💫'];
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('div');
+      p.className = 'ro-sp';
+      const angle = (i / 22) * 360;
+      const dist = 100 + Math.random() * 180;
+      p.style.setProperty('--tx', (Math.cos(angle * Math.PI / 180) * dist) + 'px');
+      p.style.setProperty('--ty', (Math.sin(angle * Math.PI / 180) * dist) + 'px');
+      p.style.setProperty('--spd', (Math.random() * 0.55) + 's');
+      p.textContent = sym[i % sym.length];
+      particles.appendChild(p);
+    }
+  } else {
+    ov.classList.add('fail-mode');
+    icon.textContent = '🥺';
+    title.textContent = '아쉽네요...';
+    sub.innerHTML = '포기하지 마세요! 💪<br>다시 도전하면 반드시 합격하실 거예요!<br><span style="font-size:1rem;color:rgba(180,215,250,0.6)">🙏 하나님께서 함께 하십니다</span>';
+
+    for (let i = 0; i < 16; i++) {
+      const r = document.createElement('div');
+      r.className = 'ro-rd';
+      r.style.left = (4 + Math.random() * 92) + '%';
+      r.style.animationDelay = (Math.random() * 2.5) + 's';
+      r.style.animationDuration = (0.85 + Math.random() * 1) + 's';
+      r.textContent = '💧';
+      particles.appendChild(r);
+    }
+    const rb = document.createElement('div');
+    rb.className = 'ro-rainbow';
+    rb.textContent = '🌈';
+    particles.appendChild(rb);
+  }
+
+  requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('ro-active')));
+  setTimeout(() => closeOverlay(), 4500);
+}
+
+function closeOverlay() {
+  const ov = document.getElementById('resultOverlay');
+  ov.classList.remove('ro-active');
+  setTimeout(() => { ov.className = 'ro'; }, 550);
+}
+</script>
+
+<!-- 결과 오버레이 -->
+<div id="resultOverlay" class="ro" onclick="closeOverlay()">
+  <div class="ro-rays" id="roRays"></div>
+  <div class="ro-center">
+    <div class="ro-icon" id="roIcon"></div>
+    <div class="ro-title" id="roTitle"></div>
+    <div class="ro-sub" id="roSub"></div>
+    <div class="ro-hint">화면을 탭하여 닫기</div>
+  </div>
+  <div class="ro-particles" id="roParticles"></div>
+</div>
+</body>
+</html>
