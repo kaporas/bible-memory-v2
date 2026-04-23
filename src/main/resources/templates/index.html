@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>성경암송대회 채점 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --gold-dark: #8B6914;
+    --parchment: #F5EDD8;
+    --ink: #1A1208;
+    --ink-mid: #3D2B10;
+    --ink-light: #6B4F2A;
+    --crimson: #8B1A1A;
+    --crimson-light: #C0392B;
+    --correct: #2D6A4F;
+    --correct-bg: #D8F3DC;
+    --wrong: #922B21;
+    --wrong-bg: #FADBD8;
+    --pass: #1A5C38;
+    --pass-bg: #C8F5DC;
+    --fail: #7B1D1D;
+    --fail-bg: #FDE8E8;
+    --shadow: rgba(26,18,8,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #1A1208;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,26,26,0.07) 0%, transparent 50%);
+    min-height: 100vh;
+    color: var(--ink);
+  }
+  .app-wrapper { max-width: 920px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  .header { text-align: center; padding: 36px 20px 26px; }
+  .header::before, .header::after {
+    content: '';
+    display: block;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 10px auto;
+    width: 70%;
+  }
+  .header-icon { font-size: 2.2rem; margin-bottom: 6px; filter: drop-shadow(0 0 14px rgba(201,168,76,0.55)); }
+  .header h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.5rem, 4.5vw, 2.2rem);
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: 0.1em;
+    text-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  }
+  .header p { color: rgba(201,168,76,0.55); font-size: 0.8rem; letter-spacing: 0.06em; margin-top: 5px; }
+  .header-nav { margin-top: 14px; }
+  .header-nav a {
+    display: inline-block;
+    color: rgba(201,168,76,0.7);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    border: 1px solid rgba(201,168,76,0.3);
+    padding: 5px 14px;
+    border-radius: 20px;
+    transition: all 0.2s;
+  }
+  .header-nav a:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .card {
+    background: var(--parchment);
+    border-radius: 4px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    padding: 13px 22px;
+    border-bottom: 2px solid var(--gold-dark);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h2 { font-family: 'Nanum Myeongjo', serif; font-size: 0.98rem; color: var(--gold-light); letter-spacing: 0.08em; }
+  .step-badge {
+    background: var(--gold); color: var(--ink);
+    font-size: 0.68rem; font-weight: 700;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .card-body { padding: 20px 22px; }
+
+  .preset-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: rgba(201,168,76,0.07);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 3px;
+  }
+  .preset-bar label { font-size: 0.75rem; font-weight: 700; color: var(--ink-light); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; margin-bottom: 0; }
+  .preset-bar select {
+    flex: 1; min-width: 180px;
+    border: 1.5px solid var(--gold-dark);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.7);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 0.88rem;
+    color: var(--ink);
+    padding: 7px 10px;
+    cursor: pointer;
+  }
+  .preset-bar select:focus { outline: none; border-color: var(--gold); }
+
+  label { display: block; font-size: 0.76rem; font-weight: 700; color: var(--ink-light); letter-spacing: 0.06em; margin-bottom: 5px; text-transform: uppercase; }
+  input[type="text"], textarea {
+    width: 100%;
+    border: 1.5px solid var(--gold-dark);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.6);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 0.93rem;
+    color: var(--ink);
+    padding: 9px 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.14); background: #fff; }
+  input.is-error { border-color: var(--wrong) !important; box-shadow: 0 0 0 3px rgba(146,43,33,0.12) !important; }
+  textarea { resize: vertical; line-height: 1.85; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .form-col { display: flex; flex-direction: column; }
+  .field-error { font-size: 0.74rem; color: var(--wrong); margin-top: 4px; display: none; }
+  .field-error.visible { display: block; }
+  .setup-hint {
+    font-size: 0.77rem; color: var(--ink-light); margin-top: 8px; line-height: 1.7;
+    padding: 9px 13px;
+    background: rgba(201,168,76,0.06);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .verse-list { display: flex; flex-direction: column; gap: 10px; }
+  .verse-item {
+    background: rgba(255,255,255,0.5);
+    border: 1.5px solid rgba(201,168,76,0.28);
+    border-radius: 3px; overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .verse-item:focus-within { border-color: var(--gold); }
+  .verse-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 14px;
+    background: rgba(201,168,76,0.07);
+    border-bottom: 1px solid rgba(201,168,76,0.18);
+  }
+  .verse-num { font-family: 'Nanum Myeongjo', serif; font-size: 0.83rem; font-weight: 700; color: var(--gold-dark); min-width: 36px; }
+  .verse-ref-preview { font-size: 0.74rem; color: var(--ink-light); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .verse-status { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; transition: all 0.3s; flex-shrink: 0; }
+  .verse-status.pending { background: rgba(201,168,76,0.13); color: var(--gold-dark); }
+  .verse-status.correct { background: var(--correct-bg); color: var(--correct); }
+  .verse-status.wrong   { background: var(--wrong-bg); color: var(--wrong); }
+  .verse-textarea {
+    border: none !important; border-radius: 0 !important; background: transparent !important;
+    padding: 9px 14px !important; font-size: 0.88rem !important; min-height: 64px; resize: vertical;
+  }
+  .verse-textarea:focus { box-shadow: none !important; }
+
+  .btn {
+    font-family: 'Nanum Myeongjo', serif; font-size: 0.88rem;
+    letter-spacing: 0.07em; cursor: pointer; border-radius: 3px;
+    padding: 10px 20px; transition: all 0.2s; font-weight: 700; border: none;
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; filter: none !important; }
+  .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: var(--ink); border: 1px solid var(--gold-dark); box-shadow: 0 2px 8px rgba(201,168,76,0.28); }
+  .btn-gold:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--ink-light); border: 1.5px solid var(--gold-dark); }
+  .btn-ghost:hover:not(:disabled) { background: rgba(201,168,76,0.1); }
+  .btn-crimson { background: linear-gradient(135deg, var(--crimson-light), var(--crimson)); color: #fff; border: 1px solid var(--crimson); box-shadow: 0 2px 8px rgba(139,26,26,0.3); }
+  .btn-crimson:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-mail { background: linear-gradient(135deg, #2563A8, #1A3F70); color: #fff; border: 1px solid #1A3F70; box-shadow: 0 2px 8px rgba(37,99,168,0.3); }
+  .btn-mail:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,6,2,0.72);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .modal-box {
+    background: var(--parchment);
+    border: 1px solid var(--gold-dark);
+    border-radius: 5px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    width: min(520px, 94vw);
+    animation: slideUp 0.25s ease;
+    overflow: hidden;
+  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+  .modal-header {
+    background: linear-gradient(135deg, var(--ink), var(--ink-mid));
+    color: var(--gold-light);
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 0.98rem; font-weight: 700; letter-spacing: 0.07em;
+    padding: 13px 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid var(--gold-dark);
+  }
+  .modal-close { background: none; border: none; color: var(--gold-light); font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 3px; transition: background 0.15s; }
+  .modal-close:hover { background: rgba(255,255,255,0.1); }
+  .modal-body { padding: 18px 20px; }
+  .modal-footer { padding: 12px 20px 18px; display: flex; gap: 10px; }
+  .mail-info-row { display: flex; align-items: baseline; gap: 10px; }
+  .mail-info-label { font-size: 0.72rem; font-weight: 700; color: var(--ink-light); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; min-width: 44px; }
+  .mail-info-value { font-size: 0.9rem; color: var(--ink); font-weight: 600; }
+  .mail-status { margin-top: 12px; padding: 10px 14px; border-radius: 3px; font-size: 0.84rem; font-weight: 600; line-height: 1.5; }
+  .mail-status.success { background: var(--correct-bg); color: var(--correct); border: 1px solid #6EE7A0; }
+  .mail-status.error   { background: var(--wrong-bg);   color: var(--wrong);   border: 1px solid #F5A0A0; }
+  .mail-status.loading { background: rgba(201,168,76,0.1); color: var(--gold-dark); border: 1px solid rgba(201,168,76,0.3); }
+
+  /* ── Result ── */
+  .result-card { display: none; animation: fadeUp 0.45s ease; }
+  .result-card.visible { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+  .pass-banner { text-align: center; padding: 24px 20px 18px; border-bottom: 1px solid rgba(201,168,76,0.18); }
+  .pf-label { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 8px; }
+  .pf-badge {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.6rem, 6vw, 2.8rem); font-weight: 800;
+    padding: 12px 38px; border-radius: 6px; letter-spacing: 0.12em; border: 2px solid transparent;
+  }
+  .pf-badge.pass { background: var(--pass-bg); color: var(--pass); border-color: #6EE7A0; }
+  .pf-badge.fail { background: var(--fail-bg); color: var(--fail); border-color: #F5A0A0; }
+
+  .score-display { text-align: center; padding: 18px 20px 16px; border-bottom: 1px solid rgba(201,168,76,0.18); }
+  .score-label { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 6px; }
+  .score-main {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(2.4rem, 8vw, 4rem); font-weight: 800; line-height: 1;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .score-sub { font-size: 0.82rem; color: var(--ink-light); margin-top: 5px; }
+  .score-threshold { font-size: 0.74rem; color: var(--ink-light); margin-top: 4px; }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 11px; padding: 18px 22px; border-bottom: 1px solid rgba(201,168,76,0.18);
+  }
+  .stat-box { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 3px; padding: 11px 8px; text-align: center; }
+  .stat-value { font-family: 'Nanum Myeongjo', serif; font-size: 1.45rem; font-weight: 800; color: var(--gold-dark); line-height: 1; }
+  .stat-label { font-size: 0.68rem; color: var(--ink-light); margin-top: 3px; }
+
+  .progress-wrap { padding: 4px 22px 18px; }
+  .progress-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--ink-light); margin-bottom: 3px; }
+  .progress-bar { height: 8px; background: rgba(201,168,76,0.13); border-radius: 4px; overflow: visible; position: relative; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); border-radius: 4px; transition: width 0.6s ease; }
+  .threshold-tick { position: absolute; top: -5px; left: 95%; width: 2px; height: 18px; background: var(--crimson); border-radius: 1px; transform: translateX(-50%); }
+  .threshold-label { position: absolute; top: 16px; left: 95%; font-size: 0.65rem; color: var(--crimson); font-weight: 700; transform: translateX(-50%); white-space: nowrap; }
+
+  .breakdown-title { font-family: 'Nanum Myeongjo', serif; font-size: 0.88rem; font-weight: 700; color: var(--ink-mid); padding: 14px 22px 8px; border-bottom: 1px solid rgba(201,168,76,0.13); }
+  .char-breakdown { padding: 12px 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .char-diff-group { background: rgba(255,255,255,0.5); border: 1px solid rgba(201,168,76,0.22); border-radius: 3px; padding: 7px 12px; min-width: 76px; text-align: center; }
+  .char-diff-label { font-size: 0.68rem; color: var(--ink-light); }
+  .char-diff-count { font-family: 'Nanum Myeongjo', serif; font-size: 1.25rem; font-weight: 800; color: var(--crimson); }
+
+  .verse-results { padding: 0 22px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .verse-result-item { border-radius: 3px; overflow: hidden; border: 1px solid rgba(201,168,76,0.18); }
+  .vr-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: rgba(201,168,76,0.05); border-bottom: 1px solid rgba(201,168,76,0.12); cursor: pointer; user-select: none; }
+  .vr-ref { font-family: 'Nanum Myeongjo', serif; font-size: 0.82rem; font-weight: 700; color: var(--ink-mid); }
+  .vr-badge { font-size: 0.7rem; font-weight: 600; padding: 2px 9px; border-radius: 10px; }
+  .vr-badge.ok  { background: var(--correct-bg); color: var(--correct); }
+  .vr-badge.err { background: var(--wrong-bg); color: var(--wrong); }
+  .vr-body { padding: 11px 14px; display: none; }
+  .vr-body.open { display: block; }
+  .diff-text { font-size: 0.86rem; line-height: 2; color: var(--ink-mid); word-break: break-all; }
+  .diff-correct { color: var(--correct); font-weight: 600; }
+  .diff-wrong { color: var(--wrong); text-decoration: underline wavy var(--wrong); font-weight: 600; }
+  .diff-extra { color: var(--ink-light); text-decoration: line-through; }
+  .diff-missing { color: var(--wrong); font-style: italic; opacity: 0.75; }
+  .diff-section { margin-bottom: 8px; }
+  .diff-section-label { font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-light); margin-bottom: 3px; }
+
+  .save-indicator { font-size: 0.72rem; color: rgba(201,168,76,0.6); margin-left: 8px; }
+
+  @media (max-width: 540px) {
+    .form-row { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media print {
+    body { background: white; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+    .btn-row, #setupSection, #inputSection { display: none !important; }
+    .result-card { display: block !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <div class="header">
+    <div class="header-icon">✝</div>
+    <h1>성경암송대회 채점 시스템</h1>
+    <p>말씀을 마음에 새기다 &nbsp;·&nbsp; Scripture Memorization Checker</p>
+    <div class="header-nav">
+      <a th:href="@{/history}">📋 채점 이력 보기</a>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card" id="setupSection">
+    <div class="card-header">
+      <div class="step-badge">1</div>
+      <h2>기준 구절 설정</h2>
+    </div>
+    <div class="card-body">
+      <div class="preset-bar">
+        <label style="margin-bottom:0;">📖 구절 프리셋</label>
+        <select id="presetSelect" onchange="applyPreset()">
+          <option value="">— 직접 입력 —</option>
+          <option value="ps119_1_32" selected>시편 119편 1~32절 (개역개정)</option>
+          <option value="ps119_1_8">시편 119편 1~8절 (알렙)</option>
+          <option value="ps119_9_16">시편 119편 9~16절 (베트)</option>
+          <option value="ps119_17_24">시편 119편 17~24절 (김멜)</option>
+          <option value="ps119_25_32">시편 119편 25~32절 (달레트)</option>
+          <option value="ps23">시편 23편 전체</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label>대회 이름</label>
+          <input type="text" id="contestName" value="2026년 서대문 성경암송대회">
+        </div>
+        <div class="form-col">
+          <label>참가자 이름 <span style="color:var(--crimson)">*</span></label>
+          <input type="text" id="participantName" placeholder="이름 입력 (2~20자, 한글/영문)"
+                 oninput="clearNameError()">
+          <span class="field-error" id="nameError"></span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label>성경 책</label>
+          <input type="text" id="bibleBook">
+        </div>
+        <div class="form-col">
+          <label>장</label>
+          <input type="text" id="bibleChapter">
+        </div>
+      </div>
+      <label>기준 구절 <span style="font-weight:400;text-transform:none;font-size:0.72rem;">(각 구절을 새 줄로 구분 · "1절:" 형식)</span></label>
+      <textarea id="referenceInput" rows="12"></textarea>
+      <div class="setup-hint">
+        💡 프리셋 선택 시 해당 구절이 자동으로 채워집니다. 직접 수정도 가능합니다.<br>
+        ⚖ 합격 기준: 전체 글자 수 기준 <strong>95% 이상</strong> 정확도 → <strong style="color:var(--pass)">합격</strong> / 미만 → <strong style="color:var(--fail)">불합격</strong>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-gold" onclick="setupVerses()">구절 설정 완료 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card" id="inputSection" style="display:none;">
+    <div class="card-header">
+      <div class="step-badge">2</div>
+      <h2>암송 내용 입력</h2>
+    </div>
+    <div class="card-body">
+      <div id="verseInputList" class="verse-list"></div>
+      <div class="btn-row">
+        <button class="btn btn-crimson" id="checkBtn" onclick="checkAll()">⚖ 채점하기</button>
+        <button class="btn btn-ghost" onclick="clearAll()">전체 지우기</button>
+        <button class="btn btn-ghost" onclick="resetSetup()">← 구절 재설정</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card result-card" id="resultSection">
+    <div class="card-header">
+      <div class="step-badge">3</div>
+      <h2>채점 결과
+        <span class="save-indicator" id="saveIndicator"></span>
+      </h2>
+    </div>
+    <div class="pass-banner">
+      <div class="pf-label">최종 판정</div>
+      <div class="pf-badge" id="pfBadge">—</div>
+    </div>
+    <div class="score-display">
+      <div class="score-label">글자 정확도</div>
+      <div class="score-main" id="scoreMain">—</div>
+      <div class="score-sub" id="scoreSub"></div>
+      <div class="score-threshold">합격 기준 : 전체 글자 수의 <strong>95% 이상</strong></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-value" id="statTotal">0</div><div class="stat-label">전체 구절</div></div>
+      <div class="stat-box"><div class="stat-value" id="statCorrect" style="color:var(--correct)">0</div><div class="stat-label">완전 정답 구절</div></div>
+      <div class="stat-box"><div class="stat-value" id="statWrong" style="color:var(--wrong)">0</div><div class="stat-label">오류 구절</div></div>
+      <div class="stat-box"><div class="stat-value" id="statTotalChars">0</div><div class="stat-label">전체 글자 수</div></div>
+      <div class="stat-box"><div class="stat-value" id="statCorrectChars" style="color:var(--correct)">0</div><div class="stat-label">맞은 글자 수</div></div>
+      <div class="stat-box"><div class="stat-value" id="statWrongChars" style="color:var(--wrong)">0</div><div class="stat-label">틀린 글자 수</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-labels">
+        <span>글자 정확도</span>
+        <span id="progressLabel">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        <div class="threshold-tick"></div>
+        <div class="threshold-label">95% 합격선</div>
+      </div>
+    </div>
+    <div class="breakdown-title">📊 오류 유형 분석 (구절당 틀린 글자 수 기준)</div>
+    <div class="char-breakdown" id="charBreakdown"></div>
+    <div class="breakdown-title" style="margin-top:6px;">📜 구절별 상세 결과 <span style="font-size:0.7rem;font-weight:400;">(클릭하면 상세 열기)</span></div>
+    <div class="verse-results" id="verseResults"></div>
+    <div style="padding: 0 22px 20px;">
+      <div class="btn-row">
+        <button class="btn btn-gold" onclick="window.print()">🖨 인쇄하기</button>
+        <button class="btn btn-mail" onclick="openMailModal()">✉ 결과 메일 전송</button>
+        <button class="btn btn-ghost" onclick="goToInput()">← 다시 입력</button>
+        <button class="btn btn-ghost" onclick="resetAll()">새로 시작</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── 메일 전송 모달 ── -->
+<div class="modal-overlay" id="mailModal" onclick="closeMailModal(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>✉ 채점 결과 메일 전송</span>
+      <button class="modal-close" onclick="closeMailModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="mail-info-row">
+        <span class="mail-info-label">수신처</span>
+        <span class="mail-info-value">82gosis@gmail.com</span>
+      </div>
+      <div class="mail-info-row" style="margin-top:6px;">
+        <span class="mail-info-label">제&nbsp;&nbsp;&nbsp;&nbsp;목</span>
+        <span class="mail-info-value" id="mailPreviewSubject" style="color:var(--ink-mid);">—</span>
+      </div>
+      <div class="setup-hint" style="margin:14px 0 0;">
+        📨 위 내용으로 채점 결과를 전송합니다.<br>
+        참가자명, 판정(합격/불합격), 글자 정확도, 구절별 결과가 포함됩니다.
+      </div>
+      <input type="hidden" id="ejsPublicKey" value="s2RJxdW67ZCN4j1gO">
+      <input type="hidden" id="ejsServiceId" value="service_jgw5pfw">
+      <input type="hidden" id="ejsTemplateId" value="template_hosgbcl">
+      <div id="mailStatus" class="mail-status" style="display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-mail" id="sendMailBtn" onclick="sendMail()">✉ 전송하기</button>
+      <button class="btn btn-ghost" onclick="closeMailModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  프리셋 데이터 (개역개정판)
+// ════════════════════════════════════
+const RAW_PS119 = [
+  '1절: 행위가 온전하여 여호와의 율법을 따라 행하는 자들은 복이 있음이여',
+  '2절: 여호와의 증거들을 지키고 전심으로 여호와를 구하는 자는 복이 있도다',
+  '3절: 참으로 그들은 불의를 행하지 아니하고 주의 도를 행하는도다',
+  '4절: 주께서 명령하사 주의 법도를 잘 지키게 하셨나이다',
+  '5절: 내 길을 굳게 정하사 주의 율례를 지키게 하소서',
+  '6절: 내가 주의 모든 계명들에 주의할 때에는 부끄럽지 아니하리이다',
+  '7절: 내가 주의 의로운 판단을 배울 때에는 정직한 마음으로 주께 감사하리이다',
+  '8절: 내가 주의 율례들을 지키오리니 나를 아주 버리지 마옵소서',
+  '9절: 청년이 무엇으로 그의 행실을 깨끗하게 하리이까 주의 말씀만 지킬 따름이니이다',
+  '10절: 내가 전심으로 주를 찾았사오니 주의 계명에서 떠나지 말게 하소서',
+  '11절: 내가 주께 범죄하지 아니하려 하여 주의 말씀을 내 마음에 두었나이다',
+  '12절: 찬송을 받으실 주 여호와여 주의 율례들을 내게 가르치소서',
+  '13절: 주의 입술의 모든 규례들을 나의 입으로 선포하였나이다',
+  '14절: 내가 주의 증거들의 도를 즐거워함이 모든 재물을 즐거워함보다 더하니이다',
+  '15절: 내가 주의 법도들을 묵상하며 주의 도들을 주의하리이다',
+  '16절: 내가 주의 율례들을 즐거워하며 주의 말씀을 잊지 아니하리이다',
+  '17절: 주의 종을 후대하여 살게 하소서 그리하시면 내가 주의 말씀을 지키리이다',
+  '18절: 내 눈을 열어서 주의 율법에서 놀라운 것들을 보게 하소서',
+  '19절: 나는 땅에서 나그네이오니 주의 계명들을 내게 숨기지 마소서',
+  '20절: 주의 규례들을 항상 사모함으로 내 마음이 상하나이다',
+  '21절: 주께서 교만한 자들을 꾸짖으셨으니 저주를 받을 자들이로소이다 그들이 주의 계명들에서 떠나므로이다',
+  '22절: 내가 주의 증거들을 지켰사오니 비방과 멸시를 내게서 떠나게 하소서',
+  '23절: 고관들도 앉아 나를 비방하였사오나 주의 종은 주의 율례들을 작은 소리로 읊조렸나이다',
+  '24절: 주의 증거들은 나의 즐거움이요 나의 권사들이니이다',
+  '25절: 내 영혼이 진토에 붙었사오니 주의 말씀대로 나를 살아나게 하소서',
+  '26절: 내가 나의 행위를 아뢰었더니 주께서 내게 응답하셨사오니 주의 율례들을 내게 가르치소서',
+  '27절: 주의 법도들의 길을 나에게 깨닫게 하소서 그리하시면 내가 주의 기이한 일들을 작은 소리로 읊조리리이다',
+  '28절: 나의 영혼이 눌림으로 말미암아 녹사오니 주의 말씀대로 나를 세우소서',
+  '29절: 거짓 행위를 내게서 떠나게 하시고 주의 율법을 내게 은혜로이 주소서',
+  '30절: 내가 성실한 길을 택하고 주의 규례들을 내 앞에 두었나이다',
+  '31절: 내가 주의 증거들을 굳게 잡았사오니 여호와여 나를 부끄럽게 하지 마소서',
+  '32절: 주께서 내 마음을 넓히시면 내가 주의 계명들의 길로 달려가리이다'
+];
+
+const PRESETS = {
+  ps119_1_32:  { book:'시편', chapter:'119편 1~32절',  verses: RAW_PS119 },
+  ps119_1_8:   { book:'시편', chapter:'119편 1~8절',   verses: RAW_PS119.slice(0,8) },
+  ps119_9_16:  { book:'시편', chapter:'119편 9~16절',  verses: RAW_PS119.slice(8,16) },
+  ps119_17_24: { book:'시편', chapter:'119편 17~24절', verses: RAW_PS119.slice(16,24) },
+  ps119_25_32: { book:'시편', chapter:'119편 25~32절', verses: RAW_PS119.slice(24,32) },
+  ps23: {
+    book:'시편', chapter:'23편',
+    verses: [
+      '1절: 여호와는 나의 목자시니 내게 부족함이 없으리로다',
+      '2절: 그가 나를 푸른 초장에 누이시며 쉴 만한 물 가로 인도하시는도다',
+      '3절: 내 영혼을 소생시키시고 자기 이름을 위하여 의의 길로 인도하시는도다',
+      '4절: 내가 사망의 음침한 골짜기로 다닐지라도 해를 두려워하지 않을 것은 주께서 나와 함께 하심이라 주의 지팡이와 막대기가 나를 안위하시나이다',
+      '5절: 주께서 내 원수의 목전에서 내게 상을 차려 주시고 기름을 내 머리에 부으셨으니 내 잔이 넘치나이다',
+      '6절: 내 평생에 선하심과 인자하심이 반드시 나를 따르리니 내가 여호와의 집에 영원히 살리로다'
+    ]
+  }
+};
+
+window.addEventListener('DOMContentLoaded', () => applyPreset());
+
+function applyPreset() {
+  const key = document.getElementById('presetSelect').value;
+  if (!key) {
+    document.getElementById('referenceInput').value = '';
+    document.getElementById('bibleBook').value = '';
+    document.getElementById('bibleChapter').value = '';
+    return;
+  }
+  const p = PRESETS[key];
+  document.getElementById('bibleBook').value = p.book;
+  document.getElementById('bibleChapter').value = p.chapter;
+  document.getElementById('referenceInput').value = p.verses.join('\n');
+}
+
+// ════════════════════════════════════
+//  Validation 헬퍼
+// ════════════════════════════════════
+function showNameError(msg) {
+  const el = document.getElementById('nameError');
+  el.textContent = msg;
+  el.classList.add('visible');
+  document.getElementById('participantName').classList.add('is-error');
+}
+function clearNameError() {
+  const el = document.getElementById('nameError');
+  el.classList.remove('visible');
+  document.getElementById('participantName').classList.remove('is-error');
+}
+
+function validateName(name) {
+  if (!name) return '참가자 이름을 입력해주세요';
+  if (name.length < 2 || name.length > 20) return '이름은 2~20자 사이로 입력해주세요';
+  if (!/^[가-힣a-zA-Z\s]+$/.test(name)) return '이름은 한글 또는 영문만 입력해주세요';
+  return null;
+}
+
+// ════════════════════════════════════
+//  구절 설정
+// ════════════════════════════════════
+let verses = [];
+
+function setupVerses() {
+  const name = document.getElementById('participantName').value.trim();
+  const nameErr = validateName(name);
+  if (nameErr) { showNameError(nameErr); return; }
+  clearNameError();
+
+  const raw = document.getElementById('referenceInput').value.trim();
+  if (!raw) { alert('기준 구절을 입력해주세요.'); return; }
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+  verses = lines.map((line, i) => {
+    const m = line.match(/^(\d+절[:：\.\s]*)/);
+    if (m) return { ref: m[0].replace(/\s+$/, ''), text: line.slice(m[0].length).trim() };
+    return { ref: `${i+1}절`, text: line };
+  });
+
+  buildInputUI();
+  document.getElementById('setupSection').style.display = 'none';
+  document.getElementById('inputSection').style.display = 'block';
+  document.getElementById('resultSection').classList.remove('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildInputUI() {
+  const list = document.getElementById('verseInputList');
+  list.innerHTML = '';
+  verses.forEach((v, i) => {
+    const div = document.createElement('div');
+    div.className = 'verse-item';
+    div.innerHTML = `
+      <div class="verse-header">
+        <span class="verse-num">${escHtml(v.ref)}</span>
+        <span class="verse-status pending" id="vstatus-${i}">대기</span>
+      </div>
+      <textarea class="verse-textarea" id="vinput-${i}"
+        placeholder="${escHtml(v.ref)} 암송 내용을 입력하세요…" rows="2"
+        oninput="onVerseInput(${i})"></textarea>`;
+    list.appendChild(div);
+  });
+}
+
+function onVerseInput(i) {
+  const val = document.getElementById(`vinput-${i}`).value.trim();
+  const st  = document.getElementById(`vstatus-${i}`);
+  if (!val) { st.textContent = '대기'; st.className = 'verse-status pending'; return; }
+  st.textContent = '입력 중'; st.className = 'verse-status pending';
+}
+
+// ════════════════════════════════════
+//  채점 (서버 API 연동)
+// ════════════════════════════════════
+let _lastResult = null;
+
+async function checkAll() {
+  const name = document.getElementById('participantName').value.trim();
+  const nameErr = validateName(name);
+  if (nameErr) {
+    showNameError(nameErr);
+    document.getElementById('setupSection').style.display = 'block';
+    document.getElementById('inputSection').style.display = 'none';
+    return;
+  }
+  clearNameError();
+
+  const btn = document.getElementById('checkBtn');
+  btn.disabled = true;
+  btn.textContent = '채점 중…';
+  document.getElementById('saveIndicator').textContent = '';
+
+  const request = {
+    participantName: name,
+    contestName: document.getElementById('contestName').value || '성경암송대회',
+    bibleBook: document.getElementById('bibleBook').value || '',
+    bibleChapter: document.getElementById('bibleChapter').value || '',
+    verses: verses.map((v, i) => ({
+      ref: v.ref,
+      referenceText: v.text,
+      inputText: document.getElementById(`vinput-${i}`).value.trim() || ''
+    }))
+  };
+
+  try {
+    const response = await fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      if (errorData.fieldErrors?.participantName) {
+        showNameError(errorData.fieldErrors.participantName);
+        document.getElementById('setupSection').style.display = 'block';
+        document.getElementById('inputSection').style.display = 'none';
+      } else {
+        alert('채점 오류: ' + (errorData.error || '알 수 없는 오류가 발생했습니다.'));
+      }
+      return;
+    }
+
+    const result = await response.json();
+
+    result.verseScores.forEach((vs, i) => {
+      const st = document.getElementById(`vstatus-${i}`);
+      if (vs.correct) { st.textContent = '✓ 정답'; st.className = 'verse-status correct'; }
+      else { st.textContent = `✗ ${vs.editDistance}자 오류`; st.className = 'verse-status wrong'; }
+    });
+
+    displayServerResults(result);
+
+  } catch(err) {
+    console.error(err);
+    alert('서버와의 연결에 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚖ 채점하기';
+  }
+}
+
+// ════════════════════════════════════
+//  결과 표시 (서버 응답 기반)
+// ════════════════════════════════════
+function displayServerResults(result) {
+  _lastResult = result;
+
+  const isPassed  = result.passed;
+  const accRound  = result.accuracy;
+
+  const pfEl = document.getElementById('pfBadge');
+  pfEl.textContent = isPassed ? '✅  합  격' : '❌  불합격';
+  pfEl.className   = 'pf-badge ' + (isPassed ? 'pass' : 'fail');
+
+  document.getElementById('scoreMain').textContent = `${accRound}%`;
+  document.getElementById('scoreSub').textContent  =
+    `${result.participantName}  ·  ${result.contestName}  ·  ${result.bibleBook || ''} ${result.bibleChapter || ''}`;
+
+  document.getElementById('statTotal').textContent        = result.totalVerses;
+  document.getElementById('statCorrect').textContent      = result.correctVerses;
+  document.getElementById('statWrong').textContent        = result.wrongVerses;
+  document.getElementById('statTotalChars').textContent   = result.totalChars;
+  document.getElementById('statCorrectChars').textContent = result.correctChars;
+  document.getElementById('statWrongChars').textContent   = result.wrongChars;
+
+  document.getElementById('progressFill').style.width   = `${Math.min(100, accRound)}%`;
+  document.getElementById('progressLabel').textContent  = `${accRound}%`;
+
+  const B = {'1자':0,'2~3자':0,'4~5자':0,'6자 이상':0};
+  result.verseScores.forEach(vs => {
+    if (!vs.editDistance) return;
+    if      (vs.editDistance === 1) B['1자']++;
+    else if (vs.editDistance <= 3)  B['2~3자']++;
+    else if (vs.editDistance <= 5)  B['4~5자']++;
+    else                            B['6자 이상']++;
+  });
+  const hasErr = Object.values(B).some(v => v > 0);
+  document.getElementById('charBreakdown').innerHTML = hasErr
+    ? Object.entries(B).filter(([,v]) => v > 0).map(([k,v]) => `
+        <div class="char-diff-group">
+          <div class="char-diff-label">오류 ${k}</div>
+          <div class="char-diff-count">${v}</div>
+          <div class="char-diff-label">구절</div>
+        </div>`).join('')
+    : '<span style="font-size:0.85rem;color:var(--correct)">🎉 모든 구절 완벽 암송!</span>';
+
+  document.getElementById('verseResults').innerHTML = result.verseScores.map((vs, i) => {
+    const refText   = vs.referenceText || '';
+    const inputText = vs.inputText || '';
+    const ops       = charDiff(refText, inputText);
+
+    return `
+      <div class="verse-result-item">
+        <div class="vr-header" onclick="toggleDetail(${i})">
+          <span class="vr-ref">${escHtml(vs.ref)}</span>
+          <span class="vr-badge ${vs.correct?'ok':'err'}">${vs.correct ? '✓ 정답' : `✗ ${vs.editDistance}자 오류`}</span>
+        </div>
+        <div class="vr-body" id="vrd-${i}">
+          ${vs.correct
+            ? `<div class="diff-text diff-correct">✓ 완벽히 암송했습니다!</div>`
+            : `<div class="diff-section">
+                 <div class="diff-section-label">기준 구절</div>
+                 <div class="diff-text">${escHtml(refText)}</div>
+               </div>
+               <div class="diff-section">
+                 <div class="diff-section-label">입력 내용 (오류 표시)</div>
+                 <div class="diff-text">${buildDiffHtml(ops)}</div>
+               </div>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  if (result.sessionId) {
+    document.getElementById('saveIndicator').textContent = `✓ 저장됨 (ID: ${result.sessionId})`;
+  }
+
+  document.getElementById('resultSection').classList.add('visible');
+  setTimeout(() => document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'start'}), 80);
+}
+
+// ════════════════════════════════════
+//  diff 알고리즘 (시각화용)
+// ════════════════════════════════════
+function normalize(s) {
+  return s.replace(/\s+/g, '').replace(/[.,!?;:'"'"'"·~\-–—]/g, '').trim();
+}
+
+function charDiff(ref, input) {
+  const rn = normalize(ref), inp = normalize(input);
+  const m = rn.length, n = inp.length;
+  const dp = Array.from({length: m+1}, (_, i) =>
+    Array.from({length: n+1}, (_, j) => i===0 ? j : j===0 ? i : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = rn[i-1]===inp[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  const ops = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i>0 && j>0 && rn[i-1]===inp[j-1]) {
+      // 삭제 경로가 동일 비용이면 삭제 우선 → 앞에서부터 순서대로 매칭
+      if (dp[i-1][j] + 1 === dp[i-1][j-1]) {
+        ops.push({t:'-', r:rn[i-1]}); i--;
+      } else {
+        ops.push({t:'=', s:inp[j-1]}); i--; j--;
+      }
+    }
+    else if (j>0 && (i===0 || dp[i][j-1]<=dp[i-1][j] && dp[i][j-1]<=dp[i-1][j-1])) { ops.push({t:'+', s:inp[j-1]}); j--; }
+    else if (i>0 && (j===0 || dp[i-1][j]<=dp[i][j-1] && dp[i-1][j]<=dp[i-1][j-1])) { ops.push({t:'-', r:rn[i-1]}); i--; }
+    else { ops.push({t:'~', r:rn[i-1], s:inp[j-1]}); i--; j--; }
+  }
+  return ops.reverse();
+}
+
+function buildDiffHtml(ops) {
+  return ops.map(op => {
+    if (op.t==='=') return `<span class="diff-correct">${escHtml(op.s)}</span>`;
+    if (op.t==='~') return `<span class="diff-wrong">${escHtml(op.s)}</span>`;
+    if (op.t==='+') return `<span class="diff-extra">${escHtml(op.s)}</span>`;
+    if (op.t==='-') return `<span class="diff-missing">[${escHtml(op.r)}]</span>`;
+    return '';
+  }).join('');
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleDetail(i) {
+  document.getElementById(`vrd-${i}`).classList.toggle('open');
+}
+
+// ════════════════════════════════════
+//  네비게이션
+// ════════════════════════════════════
+function clearAll() {
+  verses.forEach((_,i) => {
+    document.getElementById(`vinput-${i}`).value = '';
+    const st = document.getElementById(`vstatus-${i}`);
+    st.textContent='대기'; st.className='verse-status pending';
+  });
+  document.getElementById('resultSection').classList.remove('visible');
+}
+
+function goToInput() {
+  document.getElementById('resultSection').classList.remove('visible');
+  document.getElementById('inputSection').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function resetSetup() {
+  document.getElementById('setupSection').style.display = 'block';
+  document.getElementById('inputSection').style.display = 'none';
+  document.getElementById('resultSection').classList.remove('visible');
+}
+
+function resetAll() {
+  resetSetup();
+  document.getElementById('participantName').value = '';
+  clearNameError();
+  verses = [];
+  document.getElementById('presetSelect').value = 'ps119_1_32';
+  applyPreset();
+}
+
+// ════════════════════════════════════
+//  메일 전송
+// ════════════════════════════════════
+function openMailModal() {
+  if (!_lastResult) { alert('먼저 채점을 완료해주세요.'); return; }
+  const acc  = document.getElementById('scoreMain').textContent;
+  const pass = _lastResult.passed ? '합격' : '불합격';
+  document.getElementById('mailPreviewSubject').textContent =
+    `[${_lastResult.contestName}] ${_lastResult.participantName} 채점결과 – ${acc} (${pass})`;
+  hideMailStatus();
+  document.getElementById('mailModal').classList.add('open');
+}
+
+function closeMailModal(e) {
+  if (e && e.target !== document.getElementById('mailModal')) return;
+  document.getElementById('mailModal').classList.remove('open');
+}
+
+function showMailStatus(type, msg) {
+  const el = document.getElementById('mailStatus');
+  el.className = 'mail-status ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideMailStatus() {
+  document.getElementById('mailStatus').style.display = 'none';
+}
+
+async function sendMail() {
+  const pubKey = document.getElementById('ejsPublicKey').value.trim();
+  const svcId  = document.getElementById('ejsServiceId').value.trim();
+  const tplId  = document.getElementById('ejsTemplateId').value.trim();
+  if (!pubKey || !svcId || !tplId) {
+    showMailStatus('error', '❌ EmailJS 설정을 확인해주세요.');
+    return;
+  }
+  const btn = document.getElementById('sendMailBtn');
+  btn.disabled = true;
+  btn.textContent = '전송 중…';
+  showMailStatus('loading', '⏳ 메일을 전송하고 있습니다…');
+
+  try {
+    emailjs.init(pubKey);
+    const r = _lastResult;
+    const acc  = document.getElementById('scoreMain').textContent;
+    const pass = r.passed ? '합격' : '불합격';
+    const verseLines = (r.verseScores || [])
+      .map(vs => `${vs.ref}: ${vs.correct ? '✓ 정답' : `✗ ${vs.editDistance}자 오류`}`)
+      .join('\n');
+    const message = `=== ${r.contestName} 채점 결과 ===\n\n참가자: ${r.participantName}\n암송 구절: ${r.bibleBook||''} ${r.bibleChapter||''}\n판정: ${pass}\n글자 정확도: ${acc}\n\n[통계]\n전체 글자 수: ${r.totalChars}자\n맞은 글자 수: ${r.correctChars}자\n틀린 글자 수: ${r.wrongChars}자\n\n[구절별 결과]\n${verseLines}`.trim();
+    await emailjs.send(svcId, tplId, {
+      to_email: '82gosis@gmail.com',
+      subject:  `[${r.contestName}] ${r.participantName} 채점결과 – ${acc} (${pass})`,
+      message:  message
+    });
+    showMailStatus('success', `✅ 82gosis@gmail.com 으로 전송 완료!`);
+    btn.textContent = '✉ 전송 완료';
+  } catch(err) {
+    console.error(err);
+    showMailStatus('error', `❌ 전송 실패: ${err?.text || err?.message || '오류 발생'}`);
+    btn.disabled = false;
+    btn.textContent = '✉ 전송하기';
+  }
+}
+</script>
+</body>
+</html>

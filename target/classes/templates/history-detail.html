@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title th:text="${session.participantName} + ' 채점 상세 - 성경암송대회 채점 시스템'">채점 상세</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C97A; --gold-dark: #8B6914;
+    --parchment: #F5EDD8; --ink: #1A1208; --ink-mid: #3D2B10; --ink-light: #6B4F2A;
+    --crimson: #8B1A1A; --correct: #2D6A4F; --correct-bg: #D8F3DC;
+    --wrong: #922B21; --wrong-bg: #FADBD8;
+    --pass: #1A5C38; --pass-bg: #C8F5DC; --fail: #7B1D1D; --fail-bg: #FDE8E8;
+    --shadow: rgba(26,18,8,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #1A1208;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,26,26,0.07) 0%, transparent 50%);
+    min-height: 100vh; color: var(--ink);
+  }
+  .app-wrapper { max-width: 920px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  .header { text-align: center; padding: 36px 20px 26px; }
+  .header::before, .header::after {
+    content: ''; display: block; height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 10px auto; width: 70%;
+  }
+  .header-icon { font-size: 2.2rem; margin-bottom: 6px; filter: drop-shadow(0 0 14px rgba(201,168,76,0.55)); }
+  .header h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.3rem, 4vw, 1.9rem); font-weight: 800;
+    color: var(--gold-light); letter-spacing: 0.1em;
+  }
+  .header p { color: rgba(201,168,76,0.55); font-size: 0.8rem; margin-top: 5px; }
+  .header-nav { margin-top: 14px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .header-nav a {
+    display: inline-block; color: rgba(201,168,76,0.7); font-size: 0.78rem;
+    text-decoration: none; border: 1px solid rgba(201,168,76,0.3);
+    padding: 5px 14px; border-radius: 20px; transition: all 0.2s;
+  }
+  .header-nav a:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .card {
+    background: var(--parchment); border-radius: 4px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 22px; overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    padding: 13px 22px; border-bottom: 2px solid var(--gold-dark);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h2 { font-family: 'Nanum Myeongjo', serif; font-size: 0.98rem; color: var(--gold-light); letter-spacing: 0.08em; }
+
+  .pass-banner { text-align: center; padding: 24px 20px 18px; border-bottom: 1px solid rgba(201,168,76,0.18); }
+  .pf-label { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 8px; }
+  .pf-badge {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.6rem, 6vw, 2.8rem); font-weight: 800;
+    padding: 12px 38px; border-radius: 6px; letter-spacing: 0.12em; border: 2px solid transparent;
+  }
+  .pf-badge.pass { background: var(--pass-bg); color: var(--pass); border-color: #6EE7A0; }
+  .pf-badge.fail { background: var(--fail-bg); color: var(--fail); border-color: #F5A0A0; }
+
+  .score-display { text-align: center; padding: 18px 20px 16px; border-bottom: 1px solid rgba(201,168,76,0.18); }
+  .score-label { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 6px; }
+  .score-main {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(2.4rem, 8vw, 4rem); font-weight: 800; line-height: 1;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .score-sub { font-size: 0.82rem; color: var(--ink-light); margin-top: 5px; }
+  .score-threshold { font-size: 0.74rem; color: var(--ink-light); margin-top: 4px; }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 11px; padding: 18px 22px; border-bottom: 1px solid rgba(201,168,76,0.18);
+  }
+  .stat-box { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 3px; padding: 11px 8px; text-align: center; }
+  .stat-value { font-family: 'Nanum Myeongjo', serif; font-size: 1.45rem; font-weight: 800; color: var(--gold-dark); line-height: 1; }
+  .stat-label { font-size: 0.68rem; color: var(--ink-light); margin-top: 3px; }
+
+  .progress-wrap { padding: 4px 22px 18px; }
+  .progress-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--ink-light); margin-bottom: 3px; }
+  .progress-bar { height: 8px; background: rgba(201,168,76,0.13); border-radius: 4px; overflow: visible; position: relative; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); border-radius: 4px; }
+  .threshold-tick { position: absolute; top: -5px; left: 95%; width: 2px; height: 18px; background: var(--crimson); border-radius: 1px; transform: translateX(-50%); }
+  .threshold-label { position: absolute; top: 16px; left: 95%; font-size: 0.65rem; color: var(--crimson); font-weight: 700; transform: translateX(-50%); white-space: nowrap; }
+
+  .breakdown-title { font-family: 'Nanum Myeongjo', serif; font-size: 0.88rem; font-weight: 700; color: var(--ink-mid); padding: 14px 22px 8px; border-bottom: 1px solid rgba(201,168,76,0.13); }
+
+  .verse-results { padding: 0 22px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .verse-result-item { border-radius: 3px; overflow: hidden; border: 1px solid rgba(201,168,76,0.18); }
+  .vr-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: rgba(201,168,76,0.05); border-bottom: 1px solid rgba(201,168,76,0.12); cursor: pointer; user-select: none; }
+  .vr-ref { font-family: 'Nanum Myeongjo', serif; font-size: 0.82rem; font-weight: 700; color: var(--ink-mid); }
+  .vr-badge { font-size: 0.7rem; font-weight: 600; padding: 2px 9px; border-radius: 10px; }
+  .vr-badge.ok  { background: var(--correct-bg); color: var(--correct); }
+  .vr-badge.err { background: var(--wrong-bg); color: var(--wrong); }
+  .vr-body { padding: 11px 14px; display: none; }
+  .vr-body.open { display: block; }
+  .verse-text-block { font-size: 0.85rem; line-height: 1.85; color: var(--ink-mid); margin-bottom: 8px; }
+  .verse-label { font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-light); margin-bottom: 3px; }
+
+  .meta-info { padding: 0 22px 20px; display: flex; flex-wrap: wrap; gap: 20px; }
+  .meta-item { font-size: 0.78rem; color: var(--ink-light); }
+  .meta-item strong { color: var(--ink-mid); }
+
+  .btn {
+    font-family: 'Nanum Myeongjo', serif; font-size: 0.88rem;
+    letter-spacing: 0.07em; cursor: pointer; border-radius: 3px;
+    padding: 10px 20px; transition: all 0.2s; font-weight: 700; border: none;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: var(--ink); border: 1px solid var(--gold-dark); }
+  .btn-gold:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--ink-light); border: 1.5px solid var(--gold-dark); }
+  .btn-ghost:hover { background: rgba(201,168,76,0.1); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 0 22px 20px; }
+
+  @media (max-width: 540px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media print {
+    body { background: white; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+    .btn-row, .header-nav { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <div class="header">
+    <div class="header-icon">✝</div>
+    <h1 th:text="${session.participantName} + ' 채점 상세'">채점 상세</h1>
+    <p th:text="${session.contestName}">성경암송대회</p>
+    <div class="header-nav">
+      <a th:href="@{/history}">← 이력 목록</a>
+      <a th:href="@{/}" onclick="window.print()">🖨 인쇄</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>채점 결과</h2>
+    </div>
+
+    <!-- 합격/불합격 배지 -->
+    <div class="pass-banner">
+      <div class="pf-label">최종 판정</div>
+      <div class="pf-badge"
+           th:classappend="${session.passed} ? 'pass' : 'fail'"
+           th:text="${session.passed} ? '✅  합  격' : '❌  불합격'">합격</div>
+    </div>
+
+    <!-- 정확도 -->
+    <div class="score-display">
+      <div class="score-label">글자 정확도</div>
+      <div class="score-main" th:text="${(session.accuracy ?: 0)} + '%'">0%</div>
+      <div class="score-sub"
+           th:text="${session.participantName} + '  ·  ' + session.contestName + '  ·  ' + (session.bibleBook != null ? session.bibleBook : '') + ' ' + (session.bibleChapter != null ? session.bibleChapter : '')">
+      </div>
+      <div class="score-threshold">합격 기준 : 전체 글자 수의 <strong>95% 이상</strong></div>
+    </div>
+
+    <!-- 통계 -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" th:text="${session.totalVerses ?: 0}">0</div>
+        <div class="stat-label">전체 구절</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color:var(--correct)" th:text="${session.correctVerses ?: 0}">0</div>
+        <div class="stat-label">완전 정답 구절</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color:var(--wrong)"
+             th:text="${(session.totalVerses ?: 0) - (session.correctVerses ?: 0)}">0</div>
+        <div class="stat-label">오류 구절</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" th:text="${session.totalChars ?: 0}">0</div>
+        <div class="stat-label">전체 글자 수</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color:var(--correct)" th:text="${session.correctChars ?: 0}">0</div>
+        <div class="stat-label">맞은 글자 수</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color:var(--wrong)" th:text="${session.wrongChars ?: 0}">0</div>
+        <div class="stat-label">틀린 글자 수</div>
+      </div>
+    </div>
+
+    <!-- 프로그레스 바 -->
+    <div class="progress-wrap">
+      <div class="progress-labels">
+        <span>글자 정확도</span>
+        <span th:text="${(session.accuracy ?: 0)} + '%'">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill"
+             th:style="'width:' + (${(session.accuracy ?: 0) > 100 ? 100 : (session.accuracy ?: 0)}) + '%'"></div>
+        <div class="threshold-tick"></div>
+        <div class="threshold-label">95% 합격선</div>
+      </div>
+    </div>
+
+    <!-- 구절별 상세 -->
+    <div class="breakdown-title">📜 구절별 상세 결과 <span style="font-size:0.7rem;font-weight:400;">(클릭하면 상세 열기)</span></div>
+    <div class="verse-results">
+      <div class="verse-result-item" th:each="vr, stat : ${session.verseResults}">
+        <div class="vr-header" th:onclick="'toggleDetail(' + ${stat.index} + ')'">
+          <span class="vr-ref" th:text="${vr.verseRef}">1절</span>
+          <span class="vr-badge"
+                th:classappend="${vr.correct} ? 'ok' : 'err'"
+                th:text="${vr.correct} ? '✓ 정답' : ('✗ ' + (vr.editDistance ?: 0) + '자 오류')">정답</span>
+        </div>
+        <div class="vr-body" th:id="'vrd-' + ${stat.index}">
+          <div th:if="${vr.correct}" style="color:var(--correct); font-size:0.86rem; font-weight:600;">
+            ✓ 완벽히 암송했습니다!
+          </div>
+          <div th:if="${!vr.correct}">
+            <div style="margin-bottom:8px;">
+              <div class="verse-label">기준 구절</div>
+              <div class="verse-text-block" th:text="${vr.referenceText}"></div>
+            </div>
+            <div>
+              <div class="verse-label">입력 내용</div>
+              <div class="verse-text-block" th:text="${vr.inputText != null ? vr.inputText : '(미입력)'}"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 메타 정보 -->
+    <div class="meta-info">
+      <div class="meta-item">채점 일시: <strong th:text="${#temporals.format(session.createdAt, 'yyyy년 MM월 dd일 HH:mm')}">-</strong></div>
+      <div class="meta-item">세션 ID: <strong th:text="${session.id}">-</strong></div>
+    </div>
+
+    <div class="btn-row">
+      <a class="btn btn-gold" href="javascript:window.print()">🖨 인쇄하기</a>
+      <a class="btn btn-ghost" th:href="@{/history}">← 이력 목록으로</a>
+      <a class="btn btn-ghost" th:href="@{/}">새로 채점하기</a>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function toggleDetail(i) {
+  document.getElementById('vrd-' + i).classList.toggle('open');
+}
+</script>
+</body>
+</html>
