@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title th:text="${session.participantName} + ' 채점 상세 - 성경암송대회 채점 시스템'">채점 상세</title>
+<title th:text="${detail.participantName} + ' 채점 상세 - 성경암송대회 채점 시스템'">채점 상세</title>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -141,8 +141,8 @@
 
   <div class="header">
     <div class="header-icon">✝</div>
-    <h1 th:text="${session.participantName} + ' 채점 상세'">채점 상세</h1>
-    <p th:text="${session.contestName}">성경암송대회</p>
+    <h1 th:text="${detail.participantName} + ' 채점 상세'">채점 상세</h1>
+    <p th:text="${detail.contestName}">성경암송대회</p>
     <div class="header-nav">
       <a th:href="@{/history}">← 이력 목록</a>
       <a th:href="@{/}" onclick="window.print()">🖨 인쇄</a>
@@ -158,16 +158,16 @@
     <div class="pass-banner">
       <div class="pf-label">최종 판정</div>
       <div class="pf-badge"
-           th:classappend="${session.passed} ? 'pass' : 'fail'"
-           th:text="${session.passed} ? '✅  합  격' : '❌  불합격'">합격</div>
+           th:classappend="${detail.passed} ? 'pass' : 'fail'"
+           th:text="${detail.passed} ? '✅  합  격' : '❌  불합격'">합격</div>
     </div>
 
     <!-- 정확도 -->
     <div class="score-display">
       <div class="score-label">글자 정확도</div>
-      <div class="score-main" th:text="${(session.accuracy ?: 0)} + '%'">0%</div>
+      <div class="score-main" th:text="${(detail.accuracy ?: 0)} + '%'">0%</div>
       <div class="score-sub"
-           th:text="${session.participantName} + '  ·  ' + session.contestName + '  ·  ' + (session.bibleBook != null ? session.bibleBook : '') + ' ' + (session.bibleChapter != null ? session.bibleChapter : '')">
+           th:text="${detail.participantName + '  ·  ' + detail.contestName + '  ·  ' + (detail.bibleBook ?: '') + ' ' + (detail.bibleChapter ?: '')}">
       </div>
       <div class="score-threshold">합격 기준 : 전체 글자 수의 <strong>95% 이상</strong></div>
     </div>
@@ -175,28 +175,28 @@
     <!-- 통계 -->
     <div class="stats-grid">
       <div class="stat-box">
-        <div class="stat-value" th:text="${session.totalVerses ?: 0}">0</div>
+        <div class="stat-value" th:text="${detail.totalVerses ?: 0}">0</div>
         <div class="stat-label">전체 구절</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" style="color:var(--correct)" th:text="${session.correctVerses ?: 0}">0</div>
+        <div class="stat-value" style="color:var(--correct)" th:text="${detail.correctVerses ?: 0}">0</div>
         <div class="stat-label">완전 정답 구절</div>
       </div>
       <div class="stat-box">
         <div class="stat-value" style="color:var(--wrong)"
-             th:text="${(session.totalVerses ?: 0) - (session.correctVerses ?: 0)}">0</div>
+             th:text="${(detail.totalVerses ?: 0) - (detail.correctVerses ?: 0)}">0</div>
         <div class="stat-label">오류 구절</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" th:text="${session.totalChars ?: 0}">0</div>
+        <div class="stat-value" th:text="${detail.totalChars ?: 0}">0</div>
         <div class="stat-label">전체 글자 수</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" style="color:var(--correct)" th:text="${session.correctChars ?: 0}">0</div>
+        <div class="stat-value" style="color:var(--correct)" th:text="${detail.correctChars ?: 0}">0</div>
         <div class="stat-label">맞은 글자 수</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value" style="color:var(--wrong)" th:text="${session.wrongChars ?: 0}">0</div>
+        <div class="stat-value" style="color:var(--wrong)" th:text="${detail.wrongChars ?: 0}">0</div>
         <div class="stat-label">틀린 글자 수</div>
       </div>
     </div>
@@ -205,11 +205,11 @@
     <div class="progress-wrap">
       <div class="progress-labels">
         <span>글자 정확도</span>
-        <span th:text="${(session.accuracy ?: 0)} + '%'">0%</span>
+        <span th:text="${(detail.accuracy ?: 0)} + '%'">0%</span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill"
-             th:style="'width:' + (${(session.accuracy ?: 0) > 100 ? 100 : (session.accuracy ?: 0)}) + '%'"></div>
+             th:style="${'width:' + ((detail.accuracy ?: 0) > 100 ? 100 : (detail.accuracy ?: 0)) + '%'}"></div>
         <div class="threshold-tick"></div>
         <div class="threshold-label">95% 합격선</div>
       </div>
@@ -218,12 +218,12 @@
     <!-- 구절별 상세 -->
     <div class="breakdown-title">📜 구절별 상세 결과 <span style="font-size:0.7rem;font-weight:400;">(클릭하면 상세 열기)</span></div>
     <div class="verse-results">
-      <div class="verse-result-item" th:each="vr, stat : ${session.verseResults}">
+      <div class="verse-result-item" th:each="vr, stat : ${detail.verseResults}">
         <div class="vr-header" th:onclick="'toggleDetail(' + ${stat.index} + ')'">
           <span class="vr-ref" th:text="${vr.verseRef}">1절</span>
           <span class="vr-badge"
                 th:classappend="${vr.correct} ? 'ok' : 'err'"
-                th:text="${vr.correct} ? '✓ 정답' : ('✗ ' + (vr.editDistance ?: 0) + '자 오류')">정답</span>
+                th:text="${vr.correct ? '✓ 정답' : ('✗ ' + (vr.editDistance ?: 0) + '자 오류')}">정답</span>
         </div>
         <div class="vr-body" th:id="'vrd-' + ${stat.index}">
           <div th:if="${vr.correct}" style="color:var(--correct); font-size:0.86rem; font-weight:600;">
@@ -245,8 +245,8 @@
 
     <!-- 메타 정보 -->
     <div class="meta-info">
-      <div class="meta-item">채점 일시: <strong th:text="${#temporals.format(session.createdAt, 'yyyy년 MM월 dd일 HH:mm')}">-</strong></div>
-      <div class="meta-item">세션 ID: <strong th:text="${session.id}">-</strong></div>
+      <div class="meta-item">채점 일시: <strong th:text="${#temporals.format(detail.createdAt, 'yyyy년 MM월 dd일 HH:mm')}">-</strong></div>
+      <div class="meta-item">세션 ID: <strong th:text="${detail.id}">-</strong></div>
     </div>
 
     <div class="btn-row">

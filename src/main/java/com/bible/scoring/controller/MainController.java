@@ -26,7 +26,7 @@ public class MainController {
 
     @GetMapping("/history/{id}")
     public String historyDetail(@PathVariable Long id, Model model) {
-        model.addAttribute("session", scoringService.findSessionById(id));
+        model.addAttribute("detail", scoringService.findSessionById(id));
         return "history-detail";
     }
 }
