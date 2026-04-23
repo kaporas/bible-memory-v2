@@ -19,6 +19,10 @@ spring:
     resources:
       cache:
         period: 0
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 server:
   port: 8080
@@ -27,3 +31,7 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+
+ocr:
+  google:
+    api-key: AIzaSyBG8J_kJUksm2uEfyIXck4HkB1E5Z7uqf8

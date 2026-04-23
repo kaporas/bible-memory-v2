@@ -1,13 +1,13 @@
 com\bible\scoring\controller\MainController.class
 com\bible\scoring\entity\ScoringSession.class
-com\bible\scoring\BibleScoringApplication.class
-com\bible\scoring\controller\ScoringApiController.class
 com\bible\scoring\dto\ScoringResultDto.class
 com\bible\scoring\repository\VerseResultRepository.class
 com\bible\scoring\dto\VerseInputDto.class
-com\bible\scoring\repository\ScoringSessionRepository.class
 com\bible\scoring\dto\ScoringResultDto$VerseScoreItem.class
-com\bible\scoring\dto\ScoringRequest.class
 com\bible\scoring\entity\VerseResult.class
 com\bible\scoring\controller\GlobalExceptionHandler.class
+com\bible\scoring\BibleScoringApplication.class
+com\bible\scoring\controller\ScoringApiController.class
+com\bible\scoring\repository\ScoringSessionRepository.class
+com\bible\scoring\dto\ScoringRequest.class
 com\bible\scoring\service\ScoringService.class

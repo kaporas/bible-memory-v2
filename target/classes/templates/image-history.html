@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>채점 이력 - 성경암송대회 채점 시스템</title>
+<title>이미지 채점 이력 - 성경암송대회 채점 시스템</title>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -117,39 +117,33 @@
 <div class="app-wrapper">
 
   <div class="header">
-    <div class="header-icon">✝</div>
-    <h1>채점 이력</h1>
-    <p>Scripture Memorization · Scoring History</p>
+    <div class="header-icon">📷</div>
+    <h1>이미지 채점 이력</h1>
+    <p>Scripture Memorization · Image OCR Scoring History</p>
     <div class="header-nav">
-      <a th:href="@{/}">← 채점 화면으로</a>
-      <a th:href="@{/image-history}">📷 이미지 채점 이력</a>
+      <a th:href="@{/image-scoring}">← 이미지 채점으로</a>
+      <a th:href="@{/}">✎ 텍스트 채점</a>
+      <a th:href="@{/history}">📋 텍스트 채점 이력</a>
     </div>
   </div>
 
   <div class="card">
     <div class="card-header">
-      <h2>📋 전체 채점 내역</h2>
+      <h2>📋 전체 이미지 채점 내역</h2>
     </div>
     <div class="card-body">
 
-      <!-- 요약 통계 -->
       <div class="summary-bar" th:if="${!sessions.isEmpty()}">
         <span>총 채점 횟수: <strong th:text="${sessions.size()}">0</strong>회</span>
-        <span>합격:
-          <strong th:text="${sessions.?[passed].size()}">0</strong>명
-        </span>
-        <span>불합격:
-          <strong th:text="${sessions.?[!passed].size()}">0</strong>명
-        </span>
+        <span>합격: <strong th:text="${sessions.?[passed].size()}">0</strong>명</span>
+        <span>불합격: <strong th:text="${sessions.?[!passed].size()}">0</strong>명</span>
       </div>
 
-      <!-- 데이터 없을 때 -->
       <div class="empty-state" th:if="${sessions.isEmpty()}">
-        📝 아직 채점 기록이 없습니다.<br>
-        <a th:href="@{/}" style="color: var(--gold-dark); text-decoration: none; font-weight: 700;">채점하러 가기 →</a>
+        📷 아직 이미지 채점 기록이 없습니다.<br>
+        <a th:href="@{/image-scoring}" style="color: var(--gold-dark); text-decoration: none; font-weight: 700;">이미지 채점하러 가기 →</a>
       </div>
 
-      <!-- 이력 테이블 -->
       <table class="history-table" th:if="${!sessions.isEmpty()}">
         <thead>
           <tr>
@@ -163,29 +157,27 @@
           </tr>
         </thead>
         <tbody>
-          <tr th:each="scoreSession : ${sessions}">
-            <td>
-              <strong th:text="${scoreSession.participantName}">홍길동</strong>
-            </td>
-            <td th:text="${scoreSession.contestName}">2026년 대회</td>
-            <td th:text="${(scoreSession.bibleBook != null ? scoreSession.bibleBook : '') + ' ' + (scoreSession.bibleChapter != null ? scoreSession.bibleChapter : '')}">시편 119편</td>
+          <tr th:each="s : ${sessions}">
+            <td><strong th:text="${s.participantName}">홍길동</strong></td>
+            <td th:text="${s.contestName}">2026년 대회</td>
+            <td th:text="${(s.bibleBook != null ? s.bibleBook : '') + ' ' + (s.bibleChapter != null ? s.bibleChapter : '')}">시편 119편</td>
             <td>
               <div class="accuracy-bar">
                 <div class="acc-bar-wrap">
                   <div class="acc-bar-fill"
-                       th:style="'width:' + (${scoreSession.accuracy > 100 ? 100 : scoreSession.accuracy}) + '%'"></div>
+                       th:style="'width:' + (${s.accuracy > 100 ? 100 : s.accuracy}) + '%'"></div>
                 </div>
-                <span class="acc-text" th:text="${scoreSession.accuracy} + '%'">0%</span>
+                <span class="acc-text" th:text="${s.accuracy} + '%'">0%</span>
               </div>
             </td>
             <td>
               <span class="pass-chip"
-                    th:classappend="${scoreSession.passed} ? 'pass' : 'fail'"
-                    th:text="${scoreSession.passed} ? '합격' : '불합격'">합격</span>
+                    th:classappend="${s.passed} ? 'pass' : 'fail'"
+                    th:text="${s.passed} ? '합격' : '불합격'">합격</span>
             </td>
-            <td th:text="${#temporals.format(scoreSession.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01 00:00</td>
+            <td th:text="${#temporals.format(s.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01 00:00</td>
             <td>
-              <a class="detail-link" th:href="@{/history/{id}(id=${scoreSession.id})}">상세 보기</a>
+              <a class="detail-link" th:href="@{/image-history/{id}(id=${s.id})}">상세 보기</a>
             </td>
           </tr>
         </tbody>

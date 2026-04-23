@@ -38,7 +38,7 @@
     text-shadow: 0 2px 10px rgba(201,168,76,0.3);
   }
   .header p { color: rgba(201,168,76,0.55); font-size: 0.8rem; margin-top: 5px; }
-  .header-nav { margin-top: 14px; }
+  .header-nav { margin-top: 14px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
   .header-nav a {
     display: inline-block; color: rgba(201,168,76,0.7); font-size: 0.78rem;
     text-decoration: none; border: 1px solid rgba(201,168,76,0.3);
@@ -122,6 +122,7 @@
     <p>Scripture Memorization · Scoring History</p>
     <div class="header-nav">
       <a th:href="@{/}">← 채점 화면으로</a>
+      <a th:href="@{/image-history}">📷 이미지 채점 이력</a>
     </div>
   </div>
 

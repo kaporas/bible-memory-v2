@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이미지 채점 상세 - 성경암송대회 채점 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C97A; --gold-dark: #8B6914;
+    --parchment: #F5EDD8; --ink: #1A1208; --ink-mid: #3D2B10; --ink-light: #6B4F2A;
+    --correct: #2D6A4F; --correct-bg: #D8F3DC; --wrong: #922B21; --wrong-bg: #FADBD8;
+    --pass: #1A5C38; --pass-bg: #C8F5DC; --fail: #7B1D1D; --fail-bg: #FDE8E8;
+    --shadow: rgba(26,18,8,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #1A1208;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,26,26,0.07) 0%, transparent 50%);
+    min-height: 100vh; color: var(--ink);
+  }
+  .app-wrapper { max-width: 860px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  /* 헤더 */
+  .result-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    border-radius: 4px; padding: 28px 28px 24px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow);
+    margin-bottom: 20px; text-align: center;
+  }
+  .result-header-nav { text-align: left; margin-bottom: 18px; }
+  .result-header-nav a {
+    color: rgba(201,168,76,0.6); font-size: 0.78rem; text-decoration: none;
+    border: 1px solid rgba(201,168,76,0.25); padding: 4px 12px; border-radius: 20px;
+    transition: all 0.2s; margin-right: 8px; display: inline-block;
+  }
+  .result-header-nav a:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,168,76,0.08); }
+  .result-name {
+    font-family: 'Nanum Myeongjo', serif; font-size: 1rem;
+    color: rgba(201,168,76,0.65); margin-bottom: 20px; letter-spacing: 0.05em;
+  }
+  .accuracy-ring-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+  .accuracy-ring {
+    width: 120px; height: 120px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .accuracy-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: rgba(201,168,76,0.12); stroke-width: 10; }
+  .ring-fill { fill: none; stroke: url(#rg); stroke-width: 10; stroke-linecap: round; }
+  .accuracy-ring-text {
+    font-family: 'Nanum Myeongjo', serif; font-size: 1.7rem; font-weight: 800;
+    color: var(--gold-light); z-index: 1; position: relative;
+  }
+  .pass-badge-lg {
+    display: inline-block; padding: 5px 28px; border-radius: 20px;
+    font-family: 'Nanum Myeongjo', serif; font-size: 1rem; font-weight: 700;
+    letter-spacing: 0.06em; margin-bottom: 20px;
+  }
+  .pass-badge-lg.pass { background: var(--pass-bg); color: var(--pass); }
+  .pass-badge-lg.fail { background: var(--fail-bg); color: var(--fail); }
+  .stats-row { display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; }
+  .stat-item { text-align: center; }
+  .stat-val { font-family: 'Nanum Myeongjo', serif; font-size: 1.25rem; font-weight: 800; color: var(--gold-light); }
+  .stat-lbl { font-size: 0.67rem; color: rgba(201,168,76,0.45); margin-top: 3px; letter-spacing: 0.05em; }
+
+  /* 카드 */
+  .card {
+    background: var(--parchment); border-radius: 4px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    padding: 12px 22px; border-bottom: 2px solid var(--gold-dark);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h2 { font-family: 'Nanum Myeongjo', serif; font-size: 0.95rem; color: var(--gold-light); letter-spacing: 0.08em; }
+  .card-body { padding: 18px 22px; }
+
+  /* OCR 텍스트 박스 */
+  .ocr-text-box {
+    background: rgba(255,255,255,0.5); border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 3px; padding: 12px 14px;
+    font-size: 0.82rem; color: var(--ink-mid); line-height: 1.8;
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 180px; overflow-y: auto;
+  }
+  .ocr-empty { color: var(--ink-light); font-style: italic; font-size: 0.82rem; }
+
+  /* 이미지 파일명 */
+  .img-filename {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 3px; padding: 5px 12px;
+    font-size: 0.78rem; color: var(--ink-light);
+  }
+
+  /* 구절 결과 */
+  .verse-item { margin-bottom: 16px; }
+  .verse-item:last-child { margin-bottom: 0; }
+  .verse-item-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .verse-ref-tag {
+    font-family: 'Nanum Myeongjo', serif; font-size: 0.8rem; font-weight: 700;
+    color: var(--gold-dark); background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.3); padding: 2px 10px; border-radius: 3px;
+  }
+  .verse-badge {
+    font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 10px;
+  }
+  .verse-badge.correct { background: var(--correct-bg); color: var(--correct); }
+  .verse-badge.wrong { background: var(--wrong-bg); color: var(--wrong); }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 540px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-box { border-radius: 3px; padding: 10px 12px; }
+  .compare-box.ref { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); }
+  .compare-box.ocr-seg { background: rgba(255,255,255,0.5); border: 1px solid rgba(201,168,76,0.2); }
+  .compare-label { font-size: 0.65rem; font-weight: 700; color: var(--ink-light); letter-spacing: 0.05em; margin-bottom: 5px; text-transform: uppercase; }
+  .compare-text { font-size: 0.83rem; color: var(--ink-mid); line-height: 1.7; word-break: break-all; }
+
+  .divider { height: 1px; background: rgba(201,168,76,0.15); margin: 14px 0; }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <!-- 결과 헤더 -->
+  <div class="result-header">
+    <div class="result-header-nav">
+      <a th:href="@{/image-history}">← 이미지 채점 이력</a>
+      <a th:href="@{/image-scoring}">📷 이미지 채점</a>
+    </div>
+
+    <div class="result-name"
+         th:text="${detail.participantName + '  ·  ' + detail.contestName + '  ·  ' + (detail.bibleBook ?: '') + ' ' + (detail.bibleChapter ?: '')}">
+      참가자 · 대회 · 구절
+    </div>
+
+    <div class="accuracy-ring-wrap">
+      <div class="accuracy-ring">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="50"/>
+          <circle class="ring-fill" cx="60" cy="60" r="50"
+                  stroke-dasharray="314.16"
+                  th:stroke-dashoffset="${314.16 - (((detail.accuracy ?: 0) > 100 ? 100 : (detail.accuracy ?: 0)) / 100.0) * 314.16}"/>
+          <defs>
+            <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#8B6914"/>
+              <stop offset="100%" stop-color="#E8C97A"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="accuracy-ring-text" th:text="${detail.accuracy} + '%'">0%</div>
+      </div>
+    </div>
+
+    <div>
+      <span class="pass-badge-lg"
+            th:classappend="${detail.passed} ? 'pass' : 'fail'"
+            th:text="${detail.passed} ? '✓ 합격' : '✗ 불합격'">-</span>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-val" th:text="${detail.totalChars}">0</div>
+        <div class="stat-lbl">총 글자</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" th:text="${detail.correctChars}">0</div>
+        <div class="stat-lbl">정확 글자</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" th:text="${detail.wrongChars}">0</div>
+        <div class="stat-lbl">오류 글자</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" th:text="${detail.correctVerses + '/' + detail.totalVerses}">0/0</div>
+        <div class="stat-lbl">구절 완성</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" th:text="${#temporals.format(detail.createdAt, 'MM-dd HH:mm')}">-</div>
+        <div class="stat-lbl">채점 일시</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OCR 추출 텍스트 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>🔤 OCR 추출 텍스트</h2>
+    </div>
+    <div class="card-body">
+      <div th:if="${detail.imageFilename != null}" style="margin-bottom: 10px;">
+        <span class="img-filename">📄 <span th:text="${detail.imageFilename}">파일명</span></span>
+      </div>
+      <div class="ocr-text-box" th:if="${detail.ocrRawText != null and !#strings.isEmpty(detail.ocrRawText)}"
+           th:text="${detail.ocrRawText}">OCR 텍스트</div>
+      <div class="ocr-empty" th:if="${detail.ocrRawText == null or #strings.isEmpty(detail.ocrRawText)}">
+        추출된 텍스트가 없습니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 구절별 비교 결과 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>📋 구절별 비교 결과</h2>
+    </div>
+    <div class="card-body">
+      <div th:each="vr, iterStat : ${detail.verseResults}" class="verse-item">
+        <div class="verse-item-header">
+          <span class="verse-ref-tag" th:text="${vr.verseRef}">절</span>
+          <span class="verse-badge"
+                th:classappend="${vr.correct} ? 'correct' : 'wrong'"
+                th:text="${vr.correct ? '✓ 정답' : ('✗ ' + (vr.editDistance ?: 0) + '자 오류')}">결과</span>
+        </div>
+        <div class="compare-grid">
+          <div class="compare-box ref">
+            <div class="compare-label">기준 말씀</div>
+            <div class="compare-text" th:text="${vr.referenceText}">-</div>
+          </div>
+          <div class="compare-box ocr-seg">
+            <div class="compare-label">OCR 인식 텍스트</div>
+            <div class="compare-text"
+                 th:text="${(vr.ocrText != null and !#strings.isEmpty(vr.ocrText)) ? vr.ocrText : '(인식 없음)'}">-</div>
+          </div>
+        </div>
+        <div class="divider" th:if="${!iterStat.last}"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
