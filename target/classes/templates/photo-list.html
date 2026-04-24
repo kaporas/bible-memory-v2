@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>제출 목록 - 성경암송대회</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C97A; --gold-dark: #8B6914;
+    --parchment: #F5EDD8; --ink: #1A1208; --ink-mid: #3D2B10; --ink-light: #6B4F2A;
+    --shadow: rgba(26,18,8,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #1A1208;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,26,26,0.07) 0%, transparent 50%);
+    min-height: 100vh; color: var(--ink);
+  }
+  .app-wrapper { max-width: 860px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  .header { text-align: center; padding: 36px 20px 26px; }
+  .header::before, .header::after {
+    content: ''; display: block; height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 10px auto; width: 70%;
+  }
+  .header-icon { font-size: 2.2rem; margin-bottom: 6px; filter: drop-shadow(0 0 14px rgba(201,168,76,0.55)); }
+  .header h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.3rem, 4vw, 1.9rem); font-weight: 800;
+    color: var(--gold-light); letter-spacing: 0.1em;
+    text-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  }
+  .header p { color: rgba(201,168,76,0.55); font-size: 0.8rem; margin-top: 5px; }
+  .header-nav { margin-top: 14px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .header-nav a {
+    display: inline-block; color: rgba(201,168,76,0.7); font-size: 0.78rem;
+    text-decoration: none; border: 1px solid rgba(201,168,76,0.3);
+    padding: 5px 14px; border-radius: 20px; transition: all 0.2s;
+  }
+  .header-nav a:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .card {
+    background: var(--parchment); border-radius: 4px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    padding: 13px 22px; border-bottom: 2px solid var(--gold-dark);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header h2 { font-family: 'Nanum Myeongjo', serif; font-size: 0.98rem; color: var(--gold-light); letter-spacing: 0.08em; }
+  .card-header-right { font-size: 0.78rem; color: rgba(201,168,76,0.55); }
+
+  /* 빈 상태 */
+  .empty-state {
+    padding: 60px 20px; text-align: center;
+  }
+  .empty-icon { font-size: 2.8rem; margin-bottom: 14px; }
+  .empty-text { font-size: 0.95rem; color: var(--ink-light); margin-bottom: 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 22px; border: none; border-radius: 3px;
+    font-family: 'Noto Serif KR', serif; font-size: 0.88rem;
+    font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+    color: #fff; box-shadow: 0 2px 8px rgba(139,105,20,0.3);
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-sm { padding: 6px 14px; font-size: 0.78rem; }
+  .btn-outline {
+    background: transparent; color: var(--ink-light);
+    border: 1px solid rgba(139,105,20,0.3);
+  }
+  .btn-outline:hover { background: rgba(201,168,76,0.07); border-color: var(--gold); color: var(--ink); }
+  .btn-download {
+    background: rgba(45,106,79,0.1); color: #1A5C38;
+    border: 1px solid rgba(45,106,79,0.3);
+  }
+  .btn-download:hover { background: rgba(45,106,79,0.18); }
+
+  /* 테이블 */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr {
+    background: rgba(26,18,8,0.05);
+    border-bottom: 1px solid rgba(139,105,20,0.25);
+  }
+  th {
+    padding: 10px 16px; text-align: left;
+    font-size: 0.75rem; font-weight: 700;
+    color: var(--ink-light); letter-spacing: 0.06em; white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(139,105,20,0.12);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(201,168,76,0.06); }
+  td {
+    padding: 12px 16px; font-size: 0.85rem;
+    color: var(--ink-mid); vertical-align: middle;
+  }
+  .td-name { font-weight: 700; color: var(--ink); }
+  .td-note { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-light); }
+  .td-file { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; }
+  .td-size { white-space: nowrap; font-size: 0.78rem; color: var(--ink-light); }
+  .td-date { white-space: nowrap; font-size: 0.78rem; color: var(--ink-light); }
+  .td-actions { white-space: nowrap; }
+  .actions-wrap { display: flex; gap: 6px; }
+
+  /* 모바일 카드형 */
+  @media (max-width: 600px) {
+    table, thead, tbody, th, td, tr { display: block; }
+    thead { display: none; }
+    tbody tr {
+      margin-bottom: 12px; border-radius: 4px;
+      border: 1px solid rgba(139,105,20,0.2);
+      padding: 14px 16px; background: rgba(255,255,255,0.4);
+    }
+    td { padding: 4px 0; border: none; font-size: 0.83rem; }
+    td::before {
+      content: attr(data-label);
+      display: inline-block; width: 72px;
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--ink-light); letter-spacing: 0.04em;
+    }
+    .td-note, .td-file { max-width: none; white-space: normal; }
+    .td-actions { margin-top: 10px; }
+    .td-actions::before { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <div class="header">
+    <div class="header-icon">📋</div>
+    <h1>사진 파일 제출 목록</h1>
+    <p>업로드된 파일을 확인하고 다운로드하세요</p>
+    <nav class="header-nav">
+      <a href="/">채점 시스템</a>
+      <a href="/photo">새로 제출</a>
+    </nav>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>📂 제출 내역</h2>
+      <span class="card-header-right" th:text="${#lists.size(submissions)} + '건'"></span>
+    </div>
+
+    <!-- 빈 상태 -->
+    <div class="empty-state" th:if="${#lists.isEmpty(submissions)}">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">아직 제출된 파일이 없습니다.</div>
+      <a href="/photo" class="btn btn-primary">📷 첫 파일 업로드하기</a>
+    </div>
+
+    <!-- 목록 -->
+    <div class="table-wrap" th:if="${!#lists.isEmpty(submissions)}">
+      <table>
+        <thead>
+          <tr>
+            <th>이름</th>
+            <th>비고</th>
+            <th>파일명</th>
+            <th>크기</th>
+            <th>제출일시</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="s : ${submissions}">
+            <td class="td-name" data-label="이름" th:text="${s.name}"></td>
+            <td class="td-note" data-label="비고" th:text="${s.note != null && !s.note.isEmpty() ? s.note : '-'}"></td>
+            <td class="td-file" data-label="파일명" th:text="${s.fileName}"></td>
+            <td class="td-size" data-label="크기" th:text="${s.fileSize != null ? #numbers.formatDecimal(s.fileSize / 1024.0, 0, 'COMMA', 1, 'POINT') + ' KB' : '-'}"></td>
+            <td class="td-date" data-label="제출일시" th:text="${#temporals.format(s.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+            <td class="td-actions" data-label="">
+              <div class="actions-wrap">
+                <a th:href="@{/api/photo/{id}/download(id=${s.id})}" class="btn btn-sm btn-download">⬇ 다운로드</a>
+                <a th:href="@{/photo/edit/{id}(id=${s.id})}" class="btn btn-sm btn-outline">✏ 수정</a>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

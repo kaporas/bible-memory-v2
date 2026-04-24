@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사진 파일 제출 - 성경암송대회</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Serif+KR:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C; --gold-light: #E8C97A; --gold-dark: #8B6914;
+    --parchment: #F5EDD8; --ink: #1A1208; --ink-mid: #3D2B10; --ink-light: #6B4F2A;
+    --shadow: rgba(26,18,8,0.25);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #1A1208;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(139,26,26,0.07) 0%, transparent 50%);
+    min-height: 100vh; color: var(--ink);
+  }
+  .app-wrapper { max-width: 680px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  .header { text-align: center; padding: 36px 20px 26px; }
+  .header::before, .header::after {
+    content: ''; display: block; height: 1.5px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 10px auto; width: 70%;
+  }
+  .header-icon { font-size: 2.2rem; margin-bottom: 6px; filter: drop-shadow(0 0 14px rgba(201,168,76,0.55)); }
+  .header h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: clamp(1.3rem, 4vw, 1.9rem); font-weight: 800;
+    color: var(--gold-light); letter-spacing: 0.1em;
+    text-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  }
+  .header p { color: rgba(201,168,76,0.55); font-size: 0.8rem; margin-top: 5px; }
+  .header-nav { margin-top: 14px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .header-nav a {
+    display: inline-block; color: rgba(201,168,76,0.7); font-size: 0.78rem;
+    text-decoration: none; border: 1px solid rgba(201,168,76,0.3);
+    padding: 5px 14px; border-radius: 20px; transition: all 0.2s;
+  }
+  .header-nav a:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  .card {
+    background: var(--parchment); border-radius: 4px;
+    border: 1px solid var(--gold-dark);
+    box-shadow: 0 4px 28px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 22px; overflow: hidden;
+  }
+  .card-header {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-mid) 100%);
+    padding: 13px 22px; border-bottom: 2px solid var(--gold-dark);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h2 { font-family: 'Nanum Myeongjo', serif; font-size: 0.98rem; color: var(--gold-light); letter-spacing: 0.08em; }
+  .card-body { padding: 22px 24px; }
+
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: block; font-size: 0.82rem; font-weight: 600;
+    color: var(--ink-mid); margin-bottom: 6px; letter-spacing: 0.04em;
+  }
+  .form-label .required { color: #C0392B; margin-left: 3px; }
+  .form-input, .form-textarea {
+    width: 100%; padding: 9px 12px; font-size: 0.9rem;
+    font-family: 'Noto Serif KR', serif;
+    border: 1px solid rgba(139,105,20,0.35); border-radius: 3px;
+    background: rgba(255,255,255,0.7); color: var(--ink);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-input:focus, .form-textarea:focus {
+    outline: none; border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.15);
+  }
+  .form-textarea { resize: vertical; min-height: 90px; }
+
+  /* 파일 업로드 영역 */
+  .file-upload-area {
+    border: 2px dashed rgba(139,105,20,0.4); border-radius: 6px;
+    padding: 28px 20px; text-align: center; cursor: pointer;
+    background: rgba(255,255,255,0.5); transition: all 0.2s;
+    position: relative;
+  }
+  .file-upload-area:hover, .file-upload-area.drag-over {
+    border-color: var(--gold); background: rgba(201,168,76,0.07);
+  }
+  .file-upload-area input[type="file"] {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer;
+  }
+  .upload-icon { font-size: 2.4rem; margin-bottom: 10px; }
+  .upload-text { font-size: 0.9rem; color: var(--ink-light); }
+  .upload-hint { font-size: 0.75rem; color: rgba(107,79,42,0.6); margin-top: 5px; }
+
+  .file-preview {
+    margin-top: 14px; padding: 12px 16px;
+    background: rgba(201,168,76,0.1); border-radius: 4px;
+    border: 1px solid rgba(201,168,76,0.3); display: none;
+  }
+  .file-preview.show { display: flex; align-items: center; gap: 12px; }
+  .file-preview-icon { font-size: 1.8rem; }
+  .file-preview-info { flex: 1; min-width: 0; }
+  .file-preview-name { font-size: 0.85rem; font-weight: 600; color: var(--ink-mid); word-break: break-all; }
+  .file-preview-size { font-size: 0.75rem; color: var(--ink-light); margin-top: 2px; }
+  .file-remove-btn {
+    background: none; border: none; cursor: pointer;
+    color: #C0392B; font-size: 1.1rem; padding: 4px; line-height: 1;
+  }
+
+  .existing-file {
+    margin-top: 10px; padding: 10px 14px;
+    background: rgba(45,106,79,0.08); border-radius: 4px;
+    border: 1px solid rgba(45,106,79,0.25);
+    font-size: 0.82rem; color: var(--ink-mid);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .existing-file-label { font-size: 0.75rem; color: rgba(107,79,42,0.7); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px; padding: 11px 26px; border: none; border-radius: 3px;
+    font-family: 'Noto Serif KR', serif; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; letter-spacing: 0.04em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+    color: #fff; box-shadow: 0 2px 8px rgba(139,105,20,0.3);
+  }
+  .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 4px 12px rgba(139,105,20,0.4); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; filter: none; }
+  .btn-secondary {
+    background: transparent; color: var(--ink-light);
+    border: 1px solid rgba(139,105,20,0.3);
+  }
+  .btn-secondary:hover { background: rgba(201,168,76,0.07); border-color: var(--gold); }
+  .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+  /* 성공 오버레이 */
+  .success-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,18,8,0.85); z-index: 9999;
+    align-items: center; justify-content: center;
+  }
+  .success-overlay.show { display: flex; }
+  .success-box {
+    background: var(--parchment); border-radius: 8px;
+    border: 2px solid var(--gold); padding: 50px 44px;
+    text-align: center; max-width: 380px; width: 90%;
+    box-shadow: 0 10px 50px rgba(201,168,76,0.25);
+    animation: successPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes successPop {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .success-emoji { font-size: 4rem; display: block; margin-bottom: 16px; animation: bounce 0.6s 0.3s ease; }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    40%     { transform: translateY(-16px); }
+  }
+  .success-title {
+    font-family: 'Nanum Myeongjo', serif; font-size: 1.5rem; font-weight: 800;
+    color: var(--ink); margin-bottom: 8px;
+  }
+  .success-msg { font-size: 0.9rem; color: var(--ink-light); line-height: 1.6; }
+  .success-actions { margin-top: 24px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .spinner {
+    display: none; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg { font-size: 0.8rem; color: #C0392B; margin-top: 5px; display: none; }
+  .error-msg.show { display: block; }
+</style>
+</head>
+<body>
+<div class="app-wrapper">
+
+  <div class="header">
+    <div class="header-icon">📷</div>
+    <h1>사진 파일 제출</h1>
+    <p th:if="${submission == null}">파일을 업로드하여 제출해 주세요</p>
+    <p th:if="${submission != null}">업로드된 파일을 수정합니다</p>
+    <nav class="header-nav">
+      <a href="/">채점 시스템</a>
+      <a href="/photo/list">제출 목록</a>
+      <a href="/photo">새로 제출</a>
+    </nav>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span>📋</span>
+      <h2 th:text="${submission == null} ? '기본 정보 입력' : '정보 수정'">기본 정보 입력</h2>
+    </div>
+    <div class="card-body">
+
+      <!-- 이름 -->
+      <div class="form-group">
+        <label class="form-label" for="nameInput">이름<span class="required">*</span></label>
+        <input
+          id="nameInput"
+          type="text"
+          class="form-input"
+          placeholder="이름을 입력해 주세요"
+          maxlength="100"
+          th:value="${submission?.name}"
+        />
+        <div class="error-msg" id="nameError">이름을 입력해 주세요.</div>
+      </div>
+
+      <!-- 비고 -->
+      <div class="form-group">
+        <label class="form-label" for="noteInput">비고</label>
+        <textarea
+          id="noteInput"
+          class="form-textarea"
+          placeholder="의견이나 추가 내용을 입력해 주세요 (선택)"
+          th:text="${submission?.note}"
+        ></textarea>
+      </div>
+
+      <!-- 파일 업로드 -->
+      <div class="form-group">
+        <label class="form-label">
+          사진 파일<span th:if="${submission == null}" class="required">*</span>
+          <span th:if="${submission != null}" style="font-weight:normal;color:rgba(107,79,42,0.7);font-size:0.75rem;"> (변경하지 않으면 기존 파일 유지)</span>
+        </label>
+
+        <!-- 기존 파일 정보 (수정 모드) -->
+        <div th:if="${submission != null}" class="existing-file">
+          <span>📎</span>
+          <div>
+            <div class="existing-file-label">현재 파일</div>
+            <div th:text="${submission.fileName}" style="font-weight:600;"></div>
+          </div>
+        </div>
+
+        <div class="file-upload-area" id="uploadArea" th:style="${submission != null} ? 'margin-top:10px;' : ''">
+          <input type="file" id="fileInput" accept="image/*,application/pdf" />
+          <div class="upload-icon">📂</div>
+          <div class="upload-text">클릭하거나 파일을 여기로 드래그하세요</div>
+          <div class="upload-hint">이미지 파일 (JPG, PNG, HEIC, PDF 등) · 최대 20MB</div>
+        </div>
+
+        <div class="file-preview" id="filePreview">
+          <span class="file-preview-icon" id="previewIcon">🖼️</span>
+          <div class="file-preview-info">
+            <div class="file-preview-name" id="previewName"></div>
+            <div class="file-preview-size" id="previewSize"></div>
+          </div>
+          <button class="file-remove-btn" onclick="removeFile()" title="파일 제거">✕</button>
+        </div>
+        <div class="error-msg" id="fileError">파일을 선택해 주세요.</div>
+      </div>
+
+      <div class="form-actions">
+        <a href="/photo/list" class="btn btn-secondary">목록으로</a>
+        <button class="btn btn-primary" id="submitBtn" onclick="submitForm()">
+          <span class="spinner" id="spinner"></span>
+          <span id="submitLabel" th:text="${submission == null} ? '업로드' : '수정 저장'">업로드</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 성공 오버레이 -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-box">
+    <span class="success-emoji">🎉</span>
+    <div class="success-title">수고하셨습니다!</div>
+    <div class="success-msg" id="successMsg">파일이 성공적으로 업로드되었습니다.<br>고생 많으셨어요 😊</div>
+    <div class="success-actions">
+      <button class="btn btn-secondary" onclick="goList()">목록 보기</button>
+      <button class="btn btn-primary" onclick="goNew()">새로 제출</button>
+    </div>
+  </div>
+</div>
+
+<script th:inline="javascript">
+  const submissionId = /*[[${submission?.id}]]*/ null;
+  const isEdit = submissionId !== null;
+
+  const fileInput = document.getElementById('fileInput');
+  const uploadArea = document.getElementById('uploadArea');
+  const filePreview = document.getElementById('filePreview');
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) showPreview(file);
+    else hidePreview();
+  });
+
+  uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showPreview(file);
+    }
+  });
+
+  function showPreview(file) {
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = formatSize(file.size);
+    const ext = file.name.split('.').pop().toLowerCase();
+    const icon = ['jpg','jpeg','png','gif','webp','heic','heif','bmp'].includes(ext) ? '🖼️' : '📄';
+    document.getElementById('previewIcon').textContent = icon;
+    filePreview.classList.add('show');
+    document.getElementById('fileError').classList.remove('show');
+  }
+
+  function hidePreview() {
+    filePreview.classList.remove('show');
+  }
+
+  function removeFile() {
+    fileInput.value = '';
+    hidePreview();
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function validateForm() {
+    let valid = true;
+    const name = document.getElementById('nameInput').value.trim();
+    if (!name) {
+      document.getElementById('nameError').classList.add('show');
+      valid = false;
+    } else {
+      document.getElementById('nameError').classList.remove('show');
+    }
+    if (!isEdit && (!fileInput.files || !fileInput.files[0])) {
+      document.getElementById('fileError').classList.add('show');
+      valid = false;
+    } else {
+      document.getElementById('fileError').classList.remove('show');
+    }
+    return valid;
+  }
+
+  async function submitForm() {
+    if (!validateForm()) return;
+
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+
+    const formData = new FormData();
+    formData.append('name', document.getElementById('nameInput').value.trim());
+    const note = document.getElementById('noteInput').value.trim();
+    if (note) formData.append('note', note);
+    if (fileInput.files && fileInput.files[0]) {
+      formData.append('file', fileInput.files[0]);
+    }
+
+    const url = isEdit ? `/api/photo/${submissionId}/update` : '/api/photo/upload';
+
+    try {
+      const res = await fetch(url, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        if (isEdit) {
+          document.getElementById('successMsg').innerHTML =
+            '파일이 성공적으로 수정되었습니다.<br>고생 많으셨어요 😊';
+        }
+        document.getElementById('successOverlay').classList.add('show');
+      } else {
+        alert('오류: ' + (data.error || '업로드 중 오류가 발생했습니다.'));
+      }
+    } catch (e) {
+      alert('업로드 중 오류가 발생했습니다: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+    }
+  }
+
+  function goList() { window.location.href = '/photo/list'; }
+  function goNew()  { window.location.href = '/photo'; }
+</script>
+</body>
+</html>

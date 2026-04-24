@@ -1,6 +1,9 @@
 spring:
   datasource:
-    jndi-name: java:comp/env/jdbc/bible-memory
+    url: jdbc:mysql://54.180.239.27:3306/bible_scoring?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: root
+    password: root01
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: validate
