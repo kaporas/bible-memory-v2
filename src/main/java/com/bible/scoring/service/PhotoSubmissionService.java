@@ -62,4 +62,12 @@ public class PhotoSubmissionService {
                 p.getFileName(), p.getFileType(), p.getFileSize(),
                 p.getCreatedAt(), p.getUpdatedAt());
     }
+
+    @Transactional
+    public void softDelete(Long id) {
+        PhotoSubmission submission = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("제출 기록을 찾을 수 없습니다: " + id));
+        submission.setDeleted(true);
+        repository.save(submission);
+    }
 }

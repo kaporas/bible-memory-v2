@@ -41,4 +41,14 @@ public class ImageScoringApiController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @DeleteMapping("/api/image-scoring/{id}")
+    public ResponseEntity<?> softDelete(@PathVariable Long id) {
+        try {
+            imageScoringService.softDelete(id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

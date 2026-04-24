@@ -71,4 +71,14 @@ public class PhotoApiController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @DeleteMapping("/api/photo/{id}")
+    public ResponseEntity<?> softDelete(@PathVariable Long id) {
+        try {
+            photoSubmissionService.softDelete(id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

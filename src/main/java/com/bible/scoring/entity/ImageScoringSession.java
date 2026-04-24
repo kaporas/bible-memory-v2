@@ -60,6 +60,9 @@ public class ImageScoringSession {
     @Column(columnDefinition = "TEXT")
     private String ocrRawText;
 
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean deleted = false;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface ScoringSessionRepository extends JpaRepository<ScoringSession, Long> {
 
-    List<ScoringSession> findAllByOrderByCreatedAtDesc();
+    List<ScoringSession> findAllByDeletedFalseOrderByCreatedAtDesc();
 
     @Query("SELECT s FROM ScoringSession s LEFT JOIN FETCH s.verseResults WHERE s.id = :id")
     Optional<ScoringSession> findByIdWithResults(@Param("id") Long id);

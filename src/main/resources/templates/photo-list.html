@@ -86,6 +86,45 @@
     border: 1px solid rgba(45,106,79,0.3);
   }
   .btn-download:hover { background: rgba(45,106,79,0.18); }
+  .btn-delete {
+    background: rgba(192,57,43,0.08); color: #C0392B;
+    border: 1px solid rgba(192,57,43,0.3);
+  }
+  .btn-delete:hover { background: rgba(192,57,43,0.16); }
+
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,18,8,0.75); z-index: 9999;
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal-box {
+    background: var(--parchment); border-radius: 6px;
+    border: 1px solid var(--gold-dark); padding: 30px 28px;
+    max-width: 360px; width: 90%;
+    box-shadow: 0 8px 40px rgba(26,18,8,0.4);
+    animation: modalPop 0.25s ease;
+  }
+  @keyframes modalPop { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
+  .modal-icon { font-size: 2rem; text-align: center; margin-bottom: 10px; }
+  .modal-title { font-family: 'Nanum Myeongjo', serif; font-size: 1.1rem; font-weight: 800; color: var(--ink); text-align: center; margin-bottom: 8px; }
+  .modal-desc { font-size: 0.83rem; color: var(--ink-light); text-align: center; line-height: 1.6; margin-bottom: 20px; }
+  .modal-desc strong { color: var(--ink); }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+  .btn-cancel {
+    padding: 9px 22px; border: 1px solid rgba(139,105,20,0.3); border-radius: 3px;
+    background: transparent; color: var(--ink-light); cursor: pointer;
+    font-family: 'Noto Serif KR', serif; font-size: 0.88rem; transition: all 0.15s;
+  }
+  .btn-cancel:hover { background: rgba(201,168,76,0.07); }
+  .btn-confirm-delete {
+    padding: 9px 22px; border: none; border-radius: 3px;
+    background: #C0392B; color: #fff; cursor: pointer;
+    font-family: 'Noto Serif KR', serif; font-size: 0.88rem; font-weight: 700;
+    transition: all 0.15s;
+  }
+  .btn-confirm-delete:hover { background: #A93226; }
+  .btn-confirm-delete:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* 테이블 */
   .table-wrap { overflow-x: auto; }
@@ -189,6 +228,10 @@
               <div class="actions-wrap">
                 <a th:href="@{/api/photo/{id}/download(id=${s.id})}" class="btn btn-sm btn-download">⬇ 다운로드</a>
                 <a th:href="@{/photo/edit/{id}(id=${s.id})}" class="btn btn-sm btn-outline">✏ 수정</a>
+                <button class="btn btn-sm btn-delete"
+                        th:data-id="${s.id}"
+                        th:data-name="${s.name}"
+                        onclick="confirmDelete(this)">🗑 삭제</button>
               </div>
             </td>
           </tr>
@@ -198,5 +241,60 @@
   </div>
 
 </div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal-backdrop" id="deleteModal">
+  <div class="modal-box">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">파일 제출 기록 삭제</div>
+    <div class="modal-desc">
+      <strong id="deleteTargetName"></strong> 님의 제출 기록을 삭제하시겠습니까?<br>
+      화면에서 숨겨지며 데이터는 보존됩니다.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-confirm-delete" id="confirmDeleteBtn" onclick="executeDelete()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let deleteTargetId = null;
+
+  function confirmDelete(btn) {
+    deleteTargetId = btn.dataset.id;
+    document.getElementById('deleteTargetName').textContent = btn.dataset.name;
+    document.getElementById('deleteModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+    deleteTargetId = null;
+  }
+
+  async function executeDelete() {
+    if (!deleteTargetId) return;
+    const btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/photo/${deleteTargetId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        closeModal();
+        location.reload();
+      } else {
+        alert('삭제 실패: ' + (data.error || '오류가 발생했습니다.'));
+      }
+    } catch (e) {
+      alert('삭제 중 오류가 발생했습니다.');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+</script>
 </body>
 </html>

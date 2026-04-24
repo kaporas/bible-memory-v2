@@ -35,6 +35,9 @@ public class PhotoSubmission {
     @Column
     private Long fileSize;
 
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean deleted = false;
+
     @Lob
     @Column(nullable = false, columnDefinition = "MEDIUMBLOB")
     private byte[] fileData;

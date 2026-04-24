@@ -6,10 +6,9 @@ import com.bible.scoring.service.ScoringService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -22,5 +21,15 @@ public class ScoringApiController {
     public ResponseEntity<ScoringResultDto> score(@Valid @RequestBody ScoringRequest request) {
         ScoringResultDto result = scoringService.score(request);
         return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/scoring/{id}")
+    public ResponseEntity<?> softDelete(@PathVariable Long id) {
+        try {
+            scoringService.softDelete(id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

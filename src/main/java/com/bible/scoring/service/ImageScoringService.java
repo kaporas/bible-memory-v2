@@ -154,12 +154,20 @@ public class ImageScoringService {
 
     @Transactional(readOnly = true)
     public List<ImageScoringSession> findAllSessions() {
-        return sessionRepository.findAllByOrderByCreatedAtDesc();
+        return sessionRepository.findAllByDeletedFalseOrderByCreatedAtDesc();
     }
 
     @Transactional(readOnly = true)
     public ImageScoringSession findSessionById(Long id) {
         return sessionRepository.findByIdWithResults(id)
                 .orElseThrow(() -> new IllegalArgumentException("이미지 채점 세션을 찾을 수 없습니다: " + id));
+    }
+
+    @Transactional
+    public void softDelete(Long id) {
+        ImageScoringSession session = sessionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("이미지 채점 세션을 찾을 수 없습니다: " + id));
+        session.setDeleted(true);
+        sessionRepository.save(session);
     }
 }

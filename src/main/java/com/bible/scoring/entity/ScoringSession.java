@@ -54,6 +54,9 @@ public class ScoringSession {
     @Column(nullable = false)
     private Integer wrongChars;
 
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean deleted = false;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

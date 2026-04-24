@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface ImageScoringSessionRepository extends JpaRepository<ImageScoringSession, Long> {
 
-    List<ImageScoringSession> findAllByOrderByCreatedAtDesc();
+    List<ImageScoringSession> findAllByDeletedFalseOrderByCreatedAtDesc();
 
     @Query("SELECT s FROM ImageScoringSession s LEFT JOIN FETCH s.verseResults WHERE s.id = :id")
     Optional<ImageScoringSession> findByIdWithResults(@Param("id") Long id);
